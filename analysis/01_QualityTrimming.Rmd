@@ -1,0 +1,398 @@
+---
+title: "Filtering & Trimming Amplicon Sequences"
+author: "Kailyn Hanke"
+output: html_document
+date: "`r Sys.Date()`"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.align = "center",
+                      fig.path = "../figures/01_QualityTrimming/") 
+# send any figure output to this folder)
+```
+
+
+# Goals of this file 
+
+
+1. Use raw fastq files and generate quality plots to assess quality of reads.
+2. Filter and trim out bad sequences and bases from our sequencing files. 
+3. Write out fastq files with high quality sequences. 
+4. Evaluate the quality from our filter and trim. 
+5. Infer Errors on forward and reverse reads individually.
+6. Identified ASVs on forward and reverse reads separately, using the error model.  
+7. Merge forward and reverse ASVs into "contiguous ASVs".  
+8. Generate the ASV count table. (`otu_table` input for phyloseq.).
+
+Output that we will create in this file: 
+
+1. Quality plots to asses pre- and post-quality trimming. 
+2. Written files that include the filtered and trimmed data. (Note that this will be written during the `filterAndTrim()` function.)
+
+# Setting up the environment
+
+### Set the seed
+
+```{r set-seed}
+# Any number can be chosen
+set.seed(111111)
+
+```
+
+###Timing of Script
+
+```{r remd-start}
+# What time did we start running this script?
+
+start_time <- Sys.time()
+start_time
+
+```
+
+# Load Libraries 
+
+```{r load-libraries}
+
+# Efficient package loading with pacman
+pacman::p_load(tidyverse, dada2, phyloseq, patchwork, DT, devtools, install = FALSE)
+
+```
+
+# Reading Raw Sequencing Files
+
+```{r load-data}
+
+# Set the raw fastq path to the raw sequencing files 
+# Path to the fastq files 
+raw_fastqs_path <- "data/01_DADA2/01_raw_gzipped_fastqs"
+raw_fastqs_path
+
+# What files are in this path? Intuition Check 
+head(list.files(raw_fastqs_path))
+
+# How many files are there? 
+length(list.files(raw_fastqs_path))
+
+# Create vector of forward reads
+forward_reads <- list.files(raw_fastqs_path, pattern = "_1.fastq.gz", full.names = TRUE)  
+
+# Intuition Checks 
+head(forward_reads)
+
+# Intuition check #2: We should have fewer reads in the forward vector than in total 
+stopifnot(length(forward_reads) < length(list.files(raw_fastqs_path)))
+
+# Create a vector of reverse reads 
+reverse_reads <- list.files(raw_fastqs_path, pattern = "_2.fastq.gz", full.names = TRUE)
+
+# Intuition Checks
+head(reverse_reads)
+
+# Intuition check #2: Need to have equal number of forward and reverse files 
+stopifnot(length(reverse_reads) == length(forward_reads))
+
+```
+
+# Assess Raw Read Quality 
+
+## Evaluate raw sequence quality 
+
+Let's see the quality of the raw reads *before* we trim
+
+## Plot 12 random samples of plots
+```{r raw-quality-plot, fig.width=12, fig.height=8}
+
+# Randomly select 12 samples from dataset to evaluate 
+# Selecting 12 is typically better than 2 (like we did in class for efficiency)
+random_samples <- sample(1:length(reverse_reads), size = 12)
+random_samples
+
+# Calculate and plot quality of these two samples
+forward_filteredQual_plot_12 <- plotQualityProfile(forward_reads[random_samples]) + 
+  labs(title = "Forward Read: Raw Quality")
+
+reverse_filteredQual_plot_12 <- plotQualityProfile(reverse_reads[random_samples]) + 
+  labs(title = "Reverse Read: Raw Quality")
+
+# Plot them together with patchwork
+forward_filteredQual_plot_12 + reverse_filteredQual_plot_12
+
+```
+## Aggregated Raw Quality Plots 
+
+Next, we will plot all of the samples aggregated into one forward (left) and one reverse read (right) plot.
+
+```{r raw-aggregate-plot, fig.width=5.5, fig.height=3.5}
+
+# Aggregate all QC plots 
+# Forward reads
+forward_preQC_plot <- 
+  plotQualityProfile(forward_reads, aggregate = TRUE) + 
+  labs(title = "Forward Pre-QC")
+
+# reverse reads
+reverse_preQC_plot <- 
+  plotQualityProfile(reverse_reads, aggregate = TRUE) + 
+  labs(title = "Reverse Pre-QC")
+
+# Now, let's put the two plots together
+preQC_aggregate_plot <- 
+  # Plot the forward and reverse together 
+  forward_preQC_plot + reverse_preQC_plot
+
+# Show the plot
+preQC_aggregate_plot
+
+```
+Above are plots showing the pre-QC quality scores of the raw sequencing data for the project. We can draw a few conclusions from the plots above, which were generated with 2x250 bp sequencing on an Illumina MiSeq Sequencer (amplifying the V3-V4 region of the 16S rRNA gene): 
+
+1.	*Initial Bases Show a Quality Drop (~Cycle/Bases 0-10):* 
+    - Both forward and reverse reads show a pretty large drop in quality in the first ~10 bases (hard to tell where, my guess was within the first ten bases), but this is mostly above 30. Since it is above 30, which is acceptable, we do not need to trim.
+        - Note: In the forward reads at around the 10th base, the quality reaches 30-33. Although this is the steepest drop in quality seen at the beginning, the quality scores are still acceptable. 
+2.	*Fairly Stable High Quality in Mid-Read (~3-240 Cycles/Bases):* 
+    - Quality is stable and above Q30 across most of the sequencing cycle/read for the forward reads and reverse reads, although reverse reads have a steeper decline in quality near the end (addressed below).
+    - This suggests that most of the read length is high-quality and can be retained.
+3.	*Decline in Reverse Reads After ~115 Cycles/Bases:* 
+    - The reverse reads start to steadily decline in quality ~115 cycles/bases and the reverse reads start to steadily decline in quality ~120 cycles/bases.
+    - The reverse reads have a steeper decline in quality than the forward reads.
+    - The last ~ 5 bases of the forward reads shows a drop below 30, and the last ~ 35 bases of the reverse reads shows a drop below 30 indicating high sequencing error rates.
+    - **Solution**: We will truncate the reads using `truncLen = 245` to remove the final 5 poor-quality bases at the end of the forward reads and `truncLen = 215` to remove the final 35 poor-quality bases at the end of the reverse reads. 
+4.	*Forward Reads Maintain Quality Slightly Longer*
+    - Forward reads degrade after ~220-230 cycles, but the quality drop is less severe than in reverse reads. However, these Phred scores are still acceptable.
+    - **Solution**: Beyond `trimLeft=3`, no other truncation of the forward reads is necessary.
+    
+*Solutions Summary:*
+- Forward Reads:Truncate the reads using `truncLen = 245`
+- Reverse Reads:Truncate the reads using `truncLen = 215`
+
+####  Prepare a placeholder for filtered reads 
+
+```{r prep-filtered-sequences}
+# Create vector of sample names from the filenames 
+sample_names <- sapply(strsplit(basename(forward_reads), "_"), `[`,1) 
+
+# Intuition Check 
+head(sample_names)
+
+# Place filtered reads into filtered_fastqs_path
+filtered_fastqs_path <- "data/01_DADA2/02_filtered_fastqs"
+
+# Intuition Check 
+filtered_fastqs_path
+
+# create 2 vectors: filtered_forward_reads & filtered_reverse_reads
+filtered_forward_reads <- 
+  file.path(filtered_fastqs_path, paste0(sample_names, "_1.fastq.gz"))
+
+# Intuition Check 
+length(filtered_forward_reads)
+
+# reverse reads
+filtered_reverse_reads <- 
+  file.path(filtered_fastqs_path, paste0(sample_names, "_2.fastq.gz"))
+
+# Intuition Check 
+head(filtered_reverse_reads)
+
+# Intuition Check #2
+length(filtered_reverse_reads)
+```
+# Filter and Trim Reads
+
+             
+
+```{r filter-and-trim}
+
+# Trimming primers: 
+#   Forward: 50 bp (5′-TCGTCGGCAGCGTCAGATGTGTATAAGAGACAGCCTACGGGNGGCWGCAG)
+#   Reverse: 55 bp (5′-GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAGGACTACHVGGGTATCTAATCC)
+
+# Filtering out low quality reads (threshold = quality score ~25): 
+#   Forward:Trim to base/cycle 249 to eliminate sudden drop in quality score
+#   Reverse: Trim to base/cycle 248 to eliminate sudden drop in quality score
+ 
+filtered_reads <- 
+  filterAndTrim(forward_reads, filtered_forward_reads,
+             reverse_reads, filtered_reverse_reads,
+             truncLen = c(249,248), trimLeft = c(50,55),
+             maxN = 0, maxEE = c(1,1), truncQ = 2, 
+             rm.phix = TRUE, compress = TRUE, 
+             multithread = TRUE)
+
+```
+
+# Assess Trimmed Read Quality 
+
+```{r filterTrim-quality-plots,  fig.width=12, fig.height=8}
+# Plot the 12 random samples after QC
+forward_filteredQual_plot_12 <- 
+  plotQualityProfile(filtered_forward_reads[random_samples]) + 
+  labs(title = "Trimmed Forward Read Quality")
+
+reverse_filteredQual_plot_12 <- 
+  plotQualityProfile(filtered_reverse_reads[random_samples]) + 
+  labs(title = "Trimmed Reverse Read Quality")
+
+# Put the two plots together 
+forward_filteredQual_plot_12 + reverse_filteredQual_plot_12
+```
+
+## Aggregated Trimmed Plots 
+```{r qc-aggregate-plot, fig.width=5.5, fig.height=3.5}
+
+# Aggregate all QC plots 
+# Forward reads
+forward_postQC_plot <- 
+  plotQualityProfile(filtered_forward_reads, aggregate = TRUE) + 
+  labs(title = "Forward Post-QC")
+
+# reverse reads
+reverse_postQC_plot <- 
+  plotQualityProfile(filtered_reverse_reads, aggregate = TRUE) + 
+  labs(title = "Reverse Post-QC")
+
+# Now, let's put the two plots together
+postQC_aggregate_plot <- 
+  # Plot the forward and reverse together 
+  forward_postQC_plot + reverse_postQC_plot
+
+# Show the plot
+postQC_aggregate_plot
+```
+
+This post-QC quality score plot, based on 208 aggregated Illumina sequencing files, displays the forward reads (left) and reverse reads (right) after quality filtering and trimming.
+
+- *Forward Reads Post-QC*
+  - Throughout the entire read length there are high quality (Q30+) bases.
+  - There is a slight decline starting around ~120-125 cycles, ending in quality scores in the mid 30's around at the end of the read.
+- *Reverse Reads Post-QC*
+  - Initial bases remain stable and high-quality.
+  - Mid-read quality remains strong (Q30+) until about (~175 cycles)
+  - A noticeable decline in quality after ~175 cycles, but no extreme decline in quality like we saw in the pre-QC reverse reads.
+
+**Takeaway:** Quality filtering maintained high-quality bases while removing primers and low-quality tails.
+
+## Read Retention Post-QC
+
+```{r filterTrim-stats, message = FALSE, fig.height = 2.5, fig.width=8}
+# Make output into dataframe 
+filtered_df <- as.data.frame(filtered_reads) %>%
+  mutate(percent.retained = reads.out/reads.in)
+
+# Intuition check
+# Visualize it in table format 
+DT::datatable(filtered_df)
+
+# Let's calculate some statistics
+read_stats_df <- 
+  filtered_df %>%
+  reframe(median_reads_in = median(reads.in),
+          median_reads_out = median(reads.out),
+          median_percent_retained = (median(reads.out)/median(reads.in)),
+          max_percent_retained = max(reads.out/reads.in),
+          min_percent_retained = min(reads.out/reads.in))
+
+# Take a look at it!
+read_stats_df
+
+# Plot it 
+numSeqs_QC_dotplot <-
+  filtered_df %>%
+  ggplot(aes(x = reads.in, y = reads.out)) + 
+  geom_point(alpha = 0.5, size = 2) + 
+  labs(x = "# of Raw Seqs", 
+       y = "# of Seqs Retained") + 
+  # Now let's add a 1:1 line for reference of keeping 100% of the reads
+  geom_abline(slope=1, intercept = 0, color = "deeppink")
+
+#View Plot
+numSeqs_QC_dotplot
+
+# Now, let's look at the number of reads retained in a histogram
+numRetained_QC_histplot <- 
+  filtered_df %>%
+  ggplot(aes(x = reads.out)) + 
+  geom_histogram() + 
+  labs(x = "# of Seqs Retained", 
+       y = "# of Samples") 
+
+#View Plot
+numRetained_QC_histplot
+
+# Create a histogram of percent reads retained in a histogram
+percSeqs_QC_histplot <- 
+  filtered_df %>%
+  ggplot(aes(x = percent.retained)) + 
+  geom_histogram() + 
+  labs(x = "% of Seqs Retained", 
+       y = "# of Samples") + 
+  # Set the scale to be between 0-1 (0-100%)
+  scale_x_continuous(limits = c(0, 1))
+
+#View histogram
+percSeqs_QC_histplot
+
+# Now, let's put the plots together
+numSeqs_QC_dotplot + numRetained_QC_histplot + percSeqs_QC_histplot + 
+  plot_annotation(tag_levels = 'A')
+```
+**Panel A: Scatter Plot of Raw vs. Retained Sequences:**  
+
+*Interpretation of Panel A:*  
+
+- The majority of points fall fairly close to the diagonal, meaning most samples retained a high proportion of reads. There are, though, a good handful of points that are not close to the diagonal "perfect retention line". These points fall below the line. I believe that this means that these samples lost more sequences than those closer to the line during filtering.
+- Although there are a handful of samples that fall below the line, they all fall into a pattern and there looks to be no extreme outliers (no samples had excessive, unexpected loss). 
+
+**Panel B: Histogram of the Number of Sequences Retained per Sample**  
+
+*Interpretation of Panel B*  
+
+- The majority of samples have between ~50,000 and 150,000 retained sequences, which suggests good filtering efficiency; overall, most samples retained a high number of sequences, suggesting filtering was effective without excessive loss.
+- Most of the samples had a fairly tight distribution, although 10-15 samples had a much higher # of sequences retained.
+
+
+**Panel C: Histogram of Percent of Sequences Retained**  
+
+*Interpretation of Panel C*. 
+
+- Most samples retained ~45-70% of their sequences, meaning that filtering did aggressively remove data.
+- **Max % Retained** is `r read_stats_df$max_percent_retained` is not great, while **min % retained is** `r read_stats_df$min_percent_retained` which is also quite bad.
+- A **median % retained ** of `r read_stats_df$median_percent_retained` is not great either!
+
+### Visualize QC differences in plot 
+```{r pre-post-QC-plot, fig.width=6, fig.height=5.5}
+# Plot the pre and post together in one plot
+preQC_aggregate_plot / postQC_aggregate_plot
+```
+**Quality Score Improvements**
+
+- *Forward Reads (Pre vs. Post-QC)*
+  - *Beginning of read*: The forward primer (first 50 bases) was trimmed. This also effectively got rid of any lower quality bases that were present at the beginning of the reads. The majority of Phred scores are very good ~37. 
+  - *Middle of read*: Similar to the pre-QC forward reads, the post-QC reads have quality that remains consistently high. Most reads have Phred scores from Q37-Q40 across most cycles/bases.
+  - *End of read*: Pre-QC reads had a gradual decline in quality from ~150 cycles/bases until the end of the read length, with a steeper drop in quality at ~249 cycles/bases. In the post-QC reads, there is a slight decline in Phred scores, with no super low quality tails. 
+  
+- *Reverse Reads (Pre vs. Post-QC)*
+  - *Beginning of read*: The reverse primer (first 55 bases) was trimmed. This also effectively got rid of the lower quality bases that were present at the beginning of the reads. The majority of Phred scores are very good ~37 (similar to forward reads).
+  - *Middle of read*: Mid-read quality remains strong until ~140 bp. Where there begins to be a gradual decline in Phred scores.
+  - *End of read*: Pre-QC reads had a gradual decline in quality from ~140 cycles/bases until the end of the read length, with a steeper drop in quality at ~248 cycles/bases. Note that this gradual decline is more significant in the reverse reads vs. the forward reads. The trailing end of the reverse reads still shows some degradation, but it’s significantly improved from pre-QC by trimming those last two bases which were lowest quality. 
+
+
+# Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+# Session Information 
+```{r session-info}
+# Ensure reproducibility 
+devtools::session_info()
+```
