@@ -11,7 +11,7 @@
 
 <meta name="author" content="Kailyn Hanke" />
 
-<meta name="date" content="2025-03-09" />
+<meta name="date" content="2025-03-10" />
 
 <title>Filtering &amp; Trimming Amplicon Sequences</title>
 
@@ -2853,7 +2853,7 @@ display: none;
 <h1 class="title toc-ignore">Filtering &amp; Trimming Amplicon
 Sequences</h1>
 <h4 class="author">Kailyn Hanke</h4>
-<h4 class="date">2025-03-09</h4>
+<h4 class="date">2025-03-10</h4>
 
 </div>
 
@@ -2895,7 +2895,7 @@ set.seed(111111)</code></pre>
 
 start_time &lt;- Sys.time()
 start_time</code></pre>
-<pre><code>## [1] &quot;2025-03-09 22:26:56 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-03-10 20:46:14 EDT&quot;</code></pre>
 </div>
 </div>
 <div id="load-libraries" class="section level1">
@@ -3097,7 +3097,7 @@ length(filtered_reverse_reads)</code></pre>
 #   Reverse: 55 bp (5′-GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAGGACTACHVGGGTATCTAATCC)
 
 # Filtering out low quality reads (threshold = quality score ~25): 
-#   Forward:Trim to base/cycle 249 to eliminate sudden drop in quality score
+#   Forward: Trim to base/cycle 249 to eliminate sudden drop in quality score
 #   Reverse: Trim to base/cycle 248 to eliminate sudden drop in quality score
  
 filtered_reads &lt;- 
@@ -3312,6 +3312,12 @@ significantly improved from pre-QC by trimming those last two bases
 which were lowest quality.</li>
 </ul></li>
 </ul>
+<p>In summary I think I have sufficiently QC’d my sequencing data, as I
+have effectively removed the parts of the sequences that are low
+quality. Assuming I did the filterAndTrim step correctly, I do trust the
+quality of my data. The one thing I am worried about is if I will have
+sufficient overlap am able to smoothly merge in the next steps of
+processing.</p>
 </div>
 </div>
 </div>
@@ -3320,11 +3326,11 @@ which were lowest quality.</li>
 <pre class="r"><code># Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2025-03-09 23:29:48 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-03-10 21:50:36 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 1.048 hours</code></pre>
+<pre><code>## Time difference of 1.073 hours</code></pre>
 </div>
 <div id="session-information" class="section level1">
 <h1>Session Information</h1>
@@ -3340,7 +3346,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2025-03-09
+##  date     2025-03-10
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────

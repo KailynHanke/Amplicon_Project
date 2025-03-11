@@ -211,7 +211,7 @@ length(filtered_reverse_reads)
 #   Reverse: 55 bp (5′-GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAGGACTACHVGGGTATCTAATCC)
 
 # Filtering out low quality reads (threshold = quality score ~25): 
-#   Forward:Trim to base/cycle 249 to eliminate sudden drop in quality score
+#   Forward: Trim to base/cycle 249 to eliminate sudden drop in quality score
 #   Reverse: Trim to base/cycle 248 to eliminate sudden drop in quality score
  
 filtered_reads <- 
@@ -378,6 +378,9 @@ preQC_aggregate_plot / postQC_aggregate_plot
   - *Beginning of read*: The reverse primer (first 55 bases) was trimmed. This also effectively got rid of the lower quality bases that were present at the beginning of the reads. The majority of Phred scores are very good ~37 (similar to forward reads).
   - *Middle of read*: Mid-read quality remains strong until ~140 bp. Where there begins to be a gradual decline in Phred scores.
   - *End of read*: Pre-QC reads had a gradual decline in quality from ~140 cycles/bases until the end of the read length, with a steeper drop in quality at ~248 cycles/bases. Note that this gradual decline is more significant in the reverse reads vs. the forward reads. The trailing end of the reverse reads still shows some degradation, but it’s significantly improved from pre-QC by trimming those last two bases which were lowest quality. 
+  
+  
+In summary I think I have sufficiently QC'd my sequencing data, as I have effectively removed the parts of the sequences that are low quality. Assuming I did the filterAndTrim step correctly, I do trust the quality of my data. The one thing I am worried about is if I will have sufficient overlap am able to smoothly merge in the next steps of processing.
 
 
 # Check Render Time
