@@ -217,7 +217,7 @@ length(filtered_reverse_reads)
 filtered_reads <- 
   filterAndTrim(forward_reads, filtered_forward_reads,
              reverse_reads, filtered_reverse_reads,
-             truncLen = c(249,248), trimLeft = c(50,55),
+             truncLen = c(249,248), trimLeft = c(17,21),
              maxN = 0, maxEE = c(1,1), truncQ = 2, 
              rm.phix = TRUE, compress = TRUE, 
              multithread = TRUE)
