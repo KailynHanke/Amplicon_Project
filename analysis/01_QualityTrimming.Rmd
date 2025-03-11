@@ -185,14 +185,14 @@ filtered_fastqs_path
 
 # create 2 vectors: filtered_forward_reads & filtered_reverse_reads
 filtered_forward_reads <- 
-  file.path(filtered_fastqs_path, paste0(sample_names, "_1.fastq.gz"))
+  file.path(filtered_fastqs_path, paste0(sample_names, "1_filtered.fastq.gz"))
 
 # Intuition Check 
 length(filtered_forward_reads)
 
 # reverse reads
 filtered_reverse_reads <- 
-  file.path(filtered_fastqs_path, paste0(sample_names, "_2.fastq.gz"))
+  file.path(filtered_fastqs_path, paste0(sample_names, "2_filtered.fastq.gz"))
 
 # Intuition Check 
 head(filtered_reverse_reads)
