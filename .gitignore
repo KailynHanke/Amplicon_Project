@@ -1,2 +1,3 @@
 *.gz
 .Rproj.user
+data/01_DADA2/raw_ASV_counts.tsv
