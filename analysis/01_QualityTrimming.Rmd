@@ -40,6 +40,9 @@ Output that we will create in this file:
 # Any number can be chosen
 set.seed(111111)
 
+# Let's make a parameter to set the number of threads 
+n_threads = 20
+
 ```
 
 ###Timing of Script
@@ -159,14 +162,14 @@ Above are plots showing the pre-QC quality scores of the raw sequencing data for
     - The reverse reads start to steadily decline in quality ~115 cycles/bases and the reverse reads start to steadily decline in quality ~120 cycles/bases.
     - The reverse reads have a steeper decline in quality than the forward reads.
     - The last ~ 5 bases of the forward reads shows a drop below 30, and the last ~ 35 bases of the reverse reads shows a drop below 30 indicating high sequencing error rates.
-    - **Solution**: We will truncate the reads using `truncLen = 245` to remove the final 5 poor-quality bases at the end of the forward reads and `truncLen = 215` to remove the final 35 poor-quality bases at the end of the reverse reads. 
+    - **Solution**: We will truncate the reads using `truncLen = 249` to remove the final poor-quality base at the end of the forward reads and `truncLen = 240` to remove the final 10 poor-quality bases at the end of the reverse reads. 
 4.	*Forward Reads Maintain Quality Slightly Longer*
     - Forward reads degrade after ~220-230 cycles, but the quality drop is less severe than in reverse reads. However, these Phred scores are still acceptable.
-    - **Solution**: Beyond `trimLeft=3`, no other truncation of the forward reads is necessary.
+
     
 *Solutions Summary:*
-- Forward Reads:Truncate the reads using `truncLen = 245`
-- Reverse Reads:Truncate the reads using `truncLen = 215`
+- Forward Reads:Truncate the reads using `truncLen = 249`
+- Reverse Reads:Truncate the reads using `truncLen = 240`
 
 ####  Prepare a placeholder for filtered reads 
 
@@ -185,14 +188,17 @@ filtered_fastqs_path
 
 # create 2 vectors: filtered_forward_reads & filtered_reverse_reads
 filtered_forward_reads <- 
-  file.path(filtered_fastqs_path, paste0(sample_names, "1_filtered.fastq.gz"))
+  file.path(filtered_fastqs_path, paste0(sample_names, "_1_filtered.fastq.gz"))
 
-# Intuition Check 
+# Intuition Check #1 
 length(filtered_forward_reads)
+
+#Intuition Check #2
+head(filtered_forward_reads)
 
 # reverse reads
 filtered_reverse_reads <- 
-  file.path(filtered_fastqs_path, paste0(sample_names, "2_filtered.fastq.gz"))
+  file.path(filtered_fastqs_path, paste0(sample_names, "_2_filtered.fastq.gz"))
 
 # Intuition Check 
 head(filtered_reverse_reads)
@@ -207,17 +213,17 @@ length(filtered_reverse_reads)
 ```{r filter-and-trim}
 
 # Trimming primers: 
-#   Forward: 50 bp (5′-TCGTCGGCAGCGTCAGATGTGTATAAGAGACAGCCTACGGGNGGCWGCAG)
-#   Reverse: 55 bp (5′-GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAGGACTACHVGGGTATCTAATCC)
+#   Forward (341F): 17 bp (5′-CCTACGGGNGGCWGCAG)
+#   Reverse (805R): 21 bp (5′-GACTACHVGGGTATCTAATCC)
 
-# Filtering out low quality reads (threshold = quality score ~25): 
+# Filtering out low quality reads (threshold = quality score ~29 - 30): 
 #   Forward: Trim to base/cycle 249 to eliminate sudden drop in quality score
-#   Reverse: Trim to base/cycle 248 to eliminate sudden drop in quality score
+#   Reverse: Trim to base/cycle 240 to eliminate sudden drop in quality score
  
 filtered_reads <- 
   filterAndTrim(forward_reads, filtered_forward_reads,
              reverse_reads, filtered_reverse_reads,
-             truncLen = c(249,248), trimLeft = c(17,21),
+             truncLen = c(249,240), trimLeft = c(17,21),
              maxN = 0, maxEE = c(1,1), truncQ = 2, 
              rm.phix = TRUE, compress = TRUE, 
              multithread = TRUE)
@@ -359,8 +365,8 @@ numSeqs_QC_dotplot + numRetained_QC_histplot + percSeqs_QC_histplot +
 *Interpretation of Panel C*. 
 
 - Most samples retained ~45-70% of their sequences, meaning that filtering did aggressively remove data.
-- **Max % Retained** is `r read_stats_df$max_percent_retained` is not great, while **min % retained is** `r read_stats_df$min_percent_retained` which is also quite bad.
-- A **median % retained ** of `r read_stats_df$median_percent_retained` is not great either!
+- **Max % Retained** is `r read_stats_df$max_percent_retained` is not great, while **min % retained is** `r read_stats_df$min_percent_retained` which isn't super great either.
+- The **median % retained ** was `r read_stats_df$median_percent_retained`.
 
 ### Visualize QC differences in plot 
 ```{r pre-post-QC-plot, fig.width=6, fig.height=5.5}
@@ -370,14 +376,14 @@ preQC_aggregate_plot / postQC_aggregate_plot
 **Quality Score Improvements**
 
 - *Forward Reads (Pre vs. Post-QC)*
-  - *Beginning of read*: The forward primer (first 50 bases) was trimmed. This also effectively got rid of any lower quality bases that were present at the beginning of the reads. The majority of Phred scores are very good ~37. 
+  - *Beginning of read*: The forward primer (first 17 bases) was trimmed. This also effectively got rid of any lower quality bases that were present at the beginning of the reads. The majority of Phred scores are very good ~37. 
   - *Middle of read*: Similar to the pre-QC forward reads, the post-QC reads have quality that remains consistently high. Most reads have Phred scores from Q37-Q40 across most cycles/bases.
   - *End of read*: Pre-QC reads had a gradual decline in quality from ~150 cycles/bases until the end of the read length, with a steeper drop in quality at ~249 cycles/bases. In the post-QC reads, there is a slight decline in Phred scores, with no super low quality tails. 
   
 - *Reverse Reads (Pre vs. Post-QC)*
-  - *Beginning of read*: The reverse primer (first 55 bases) was trimmed. This also effectively got rid of the lower quality bases that were present at the beginning of the reads. The majority of Phred scores are very good ~37 (similar to forward reads).
+  - *Beginning of read*: The reverse primer (first 21 bases) was trimmed. This also effectively got rid of the lower quality bases that were present at the beginning of the reads. The majority of Phred scores are very good ~37 (similar to forward reads).
   - *Middle of read*: Mid-read quality remains strong until ~140 bp. Where there begins to be a gradual decline in Phred scores.
-  - *End of read*: Pre-QC reads had a gradual decline in quality from ~140 cycles/bases until the end of the read length, with a steeper drop in quality at ~248 cycles/bases. Note that this gradual decline is more significant in the reverse reads vs. the forward reads. The trailing end of the reverse reads still shows some degradation, but it’s significantly improved from pre-QC by trimming those last two bases which were lowest quality. 
+  - *End of read*: Pre-QC reads had a gradual decline in quality from ~140 cycles/bases until the end of the read length, with a steeper drop in quality at the very end of the read. Note that this gradual decline is more significant in the reverse reads vs. the forward reads. The trailing end of the reverse reads still shows some degradation, but it’s significantly improved from pre-QC by trimming those last 10 bases which were lowest quality. 
   
   
 In summary I think I have sufficiently QC'd my sequencing data, as I have effectively removed the parts of the sequences that are low quality. Assuming I did the filterAndTrim step correctly, I do trust the quality of my data. The one thing I am worried about is if I will have sufficient overlap am able to smoothly merge in the next steps of processing.
