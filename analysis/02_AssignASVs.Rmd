@@ -363,9 +363,9 @@ INTERPRETATION #4:
 
 - 61.52% of the total merged ASVs were retained after both trimming and chimera removal
 
-At this point in time, I am not confident that the ASV lengths have been trimmed appropriately. Initially in the ASV length trimming step, I established a length range of 408bp - 426bp and only 18.22% of the ASVs were retained! I feel much more confident in the range I used for acceptable ASV length, as I now retain 61.52% of the total merged ASVs were after BOTH trimming and chimera removal.
+At this point in time, I am confident that the ASV lengths have been trimmed appropriately. Initially in the ASV length trimming step, I established a length range of 408bp - 426bp and only 18.22% of the ASVs were retained! I feel much more confident in the range I used for acceptable ASV length, as I now retain 61.52% of the total merged ASVs were after BOTH trimming and chimera removal.
 
-With my initial ASL length trimming paramters keeping ASVs that were between 408 and 426bp, the max number of ASVs at a certain length wer just above 20 000. In the plot below you can see that now this number sits above 100 000. Even with chimera removal, the max number of ASVs after trimming is above 60 000. After a lot of troubleshooting, I am happy with these paramters and confident with the results I am getting.
+With my initial ASV length trimming parameters keeping ASVs that were between 408 and 426bp, the max number of ASVs at a certain length were just above 20 000. In the plot below you can see that now this number sits above 100 000. Even with chimera removal, the max number of ASVs after trimming is above 60 000. After a lot of troubleshooting, I am happy with these parameters and confident with the results I am getting.
 
 Big thank you to Sophia for helping me figure this out!
 
