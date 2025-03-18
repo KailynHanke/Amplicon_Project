@@ -270,11 +270,11 @@ My shortest ASV length is 232bp, my mean ASV length is 391bp, and my median ASV 
 
 INTERPRETATION #3: Taking into account INTERPRETATIONS #1 and #2, what is your suggested trimming procedure for your ASV lengths? Will you allow some variation or trim to an exact length, similar to our in class example here?
 
-Since I have quite a bit of variation in ASV length, yes I think I think I will allow some variation instead of trimming to an exact length. Based on the ASV length data I've generated above, I think I will trim ASV length to a range of 408bp - 426bp.
+Since I have quite a bit of variation in ASV length, yes I think I think I will allow some variation instead of trimming to an exact length. Based on the ASV length data I've generated above, I think I will trim ASV length to a range of 408bp - 429bp.Note that I was originally going to have this range be between 408 - 426bp (my median length to expected length), but extended the range to 429bp to include the large number of ASVs that were between 427 and 429bp in length. My original range of 408bp - 426bp only retained 18% of my ASVs.
 
 ## Trim ASV lengths 
 
-Now that we are pretty convinced that we have some spurious ASVs, we will trim ASVs that are higher or lower than 408bp - 426bp base pairs in this data set. 
+Now that we are pretty convinced that we have some spurious ASVs, we will trim ASVs that are higher or lower than 408bp - 429bp base pairs in this data set. 
 
 
 *Let's trim the ASVs to only be the right size, which is 408 - 426!* 
@@ -282,7 +282,7 @@ Now that we are pretty convinced that we have some spurious ASVs, we will trim A
 ```{r trim-ASVs}
 # Subset only ASVs that are between 408 and 426 bps long 
 raw_ASV_table_trimmed <- 
-  raw_ASV_table[, between(nchar(colnames(raw_ASV_table)), 408, 426)]
+  raw_ASV_table[,nchar(colnames(raw_ASV_table)) %in% 408:429]
 
 
 # Inspect the distribution of sequence lengths of all ASVs in dataset 
@@ -342,7 +342,7 @@ plot_ASVLength_NoChimeras <-
 plot_ASVLength_NoChimeras 
 ```
 
-So, we have removed 7633 ASVs, which were chimeras. Let's review what proportion of ASVs we have retained along the workflow: 
+So, we have removed 47670 ASVs, which were chimeras. Let's review what proportion of ASVs we have retained along the workflow: 
 
 1. `r round(percRetained_Trimmed * 100, digits = 2)`% of the raw ASVs were retained *after trimming*.
 2. `r round(percRetained_chimerasTrimmed *100, digits = 2)`% of the trimmed ASV counts were retained *after chimera removal*.
@@ -350,13 +350,24 @@ So, we have removed 7633 ASVs, which were chimeras. Let's review what proportion
 
 
 INTERPRETATION #4: 
+
 (1) What proportion of raw ASVs were retained after trimming?
-- 18.22% of raw ASVs were retained after trimming?
-(2) What proportion of the trimmed ASVs were retained after chimera removal? 
-- 97.54% of the trimmed ASVs were retained after chimera removal
+
+- 66.83% of raw ASVs were retained after trimming?
+
+(2) What proportion of the trimmed ASVs were retained after chimera removal?
+
+- 92.06% of the trimmed ASVs were retained after chimera removal
+
 (3) What proportion of the total merged ASVs were retained after both trimming and chimera removal? Do you think that the ASV lengths have been trimmed appropriately? For inspiration, you are encouraged to describe the conclusions from the the ASV length plot below.
-- 17.78% of the total merged ASVs were retained after both trimming and chimera removal?
-- At this point in time, no, I am not confident that the ASV lengths have been trimmed appropriately, as in the initial ASL length trimming step where I established a length range of 408bp - 426bp only 18.22% of the ASVs were retained! You can see in the plot below you can see how the max number of ASVs at a certain length are just above 20 000, when before the length trimming that number was above 100 000. I am confident with the chimera removal step though. I will consult Mar/Sophia moving forward on the best strategy for establishing ASV length!
+
+- 61.52% of the total merged ASVs were retained after both trimming and chimera removal
+
+At this point in time, I am not confident that the ASV lengths have been trimmed appropriately. Initially in the ASV length trimming step, I established a length range of 408bp - 426bp and only 18.22% of the ASVs were retained! I feel much more confident in the range I used for acceptable ASV length, as I now retain 61.52% of the total merged ASVs were after BOTH trimming and chimera removal.
+
+With my initial ASL length trimming paramters keeping ASVs that were between 408 and 426bp, the max number of ASVs at a certain length wer just above 20 000. In the plot below you can see that now this number sits above 100 000. Even with chimera removal, the max number of ASVs after trimming is above 60 000. After a lot of troubleshooting, I am happy with these paramters and confident with the results I am getting.
+
+Big thank you to Sophia for helping me figure this out!
 
 ### Plot ASV Lengths 
 
@@ -452,22 +463,22 @@ The figure above consists of three plots that summarize sequencing depth, ASV ri
 
 **Panel A: Read Depth after DADA2:** Histogram of sequencing depth per sample (Total # of Sequences)
 
-- The distribution is roughly unimodal, centered around 20 000 reads per sample.
-- There are about 7 samples with very low read counts
-- A couple of other samples have higher sequencing depth (>60,000 reads).
+- The distribution is roughly unimodal, centered around 60 000 reads per sample.
+- There are about 15 samples with very low read counts
+- A couple of other samples have higher sequencing depth (>150,000 reads).
 
 **Panel B: ASV Richness after DADA2:** Histogram of ASV richness (Total # of ASVs per sample)
 
-- Most samples have ~125–375 ASVs, following a similar unimodal distribution as sequencing depth.
-- About 2 samples have very low ASV counts (~0-10). *Perhaps this corresponds to low read depth?*
+- Most samples have ~250–1000 ASVs, following a similar unimodal distribution as sequencing depth.
+- About 1 or 2 samples have very low ASV counts (~0-10). *Perhaps this corresponds to low read depth?*
 
 **Panel C: Read Depth vs ASV Richness:** Scatter plot showing the relationship between sequencing depth and ASV richness.
 
-- Similar to the class data, there generally there might be a positive correlation, where samples with higher read depth tend to have more ASVs. 
+- Similar to the class data, generally there might be a positive correlation, where samples with higher read depth tend to have more ASVs. 
 
 **Overall Interpretation & Considerations**
 
-1.	*Sequencing depth variation*: Most samples cluster around a common sequencing depth, but there are at least seven samples that are definitely under-sequenced.
+1.	*Sequencing depth variation*: Most samples cluster around a common sequencing depth, but there are at least 15 samples that are likely under-sequenced.
 2. *ASV richness follows read depth trends*: Samples with low sequencing depth exhibit reduced ASV richness, which may introduce bias in ecological interpretations
 3.	*Rarefaction or normalization may be needed*: The plot on the right indicates that richness estimates are affected by read depth. As discussed in class, rarefying or using statistical corrections will be necessary for accurate comparative analysis.
 
