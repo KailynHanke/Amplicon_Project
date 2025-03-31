@@ -1,0 +1,400 @@
+---
+title: "PreProcessing ASVs with Phyloseq"
+author: "Kailyn Hanke"
+date: "2025-03-30"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.align = "center", 
+                      # write figures to the figures folder
+                      fig.path = "../figures/03_PreProcessing/")
+```
+
+# Goals 
+
+First, we will use the [phyloseq package](https://joey711.github.io/phyloseq/) to combine all of our data objects that we exported from the DADA2 workflow (`asv_table`, `tax_table`, and metadata) and incorporate them into a single [specialized S4 R Data object](https://adv-r.hadley.nz/s4.html), known as a phyloseq object. Then, we will remove any potential contaminants and evaluate the accuracy of our sequencing run. Finally, we will write our our single `raw_preprocessed_physeq` phyloseq data object. 
+
+## Specific Steps: 
+
+1. Load in data that we've generated in `analysis/02_AssignASVs.Rmd` and fix all of the names to match each other. *The names must match for us to incorporate them into the S4 phyloseq object*: 
+    a. `asv_table`: ASVs (rows) x Samples (columns)
+    b. `tax_table`: ASV (rows) x Taxonomy (columns)
+    c. `metadata`: Samples (rows) x All our data (*e.g. pH, Temp, treatment group, etc*; columns)
+2. Combine the data into a phyloseq object. 
+3. Remove any contaminating ASVs that are **chloroplasts**. 
+4. Remove ASVs that are **mitochondria**. 
+5. Evaluate any ASVs from the **negative controls**. Then, remove negative controls. 
+6. Evaluate the mock community or **positive control** to learn the accuracy of sequencing. 
+7. Check for **reverse complements**. 
+8. Check the **sequencing depth** of samples. Remove samples that obviously have too few reads. 
+9. Write a `raw_preprocessed_physeq` to be used in the next step of our workflow. 
+
+## Input 
+
+1. **Metadata**: `metadata.csv` and `data/01_DADA2/track_read_counts.RData`.
+2. **ASV table**: `data/01_DADA2/ASV_table.csv` 
+3. **Taxonomy Table**: `data/01_DADA2/ASV_taxonomy.tsv`
+
+## Output 
+
+1. A **pre-processed S4 phyloseq object**: `raw_preprocessed_physeq.RData`.
+
+
+
+# Set Environment 
+
+## Load Packages 
+```{r load-packages}
+#install.packages("BiocManager")
+#BiocManager::install("Biostrings")
+
+# NOTE, you will need to install the following 2 packages to 
+# re-create the negative control plots below!
+#install.packages("ggpubr")
+#install.packages("rstatix")
+
+# Load packages with pacman
+# Be sure that you load dada2 & Patchwork, which we didn't do in class on March 12th
+pacman::p_load(devtools, phyloseq, dada2, patchwork, Biostrings, tidyverse,
+               # Note to add ggpubr & rstatix!!
+               ggpubr, rstatix, install = FALSE)
+```
+
+## Timing of this script
+
+Let's record how long this file took to run on the class server, which we will record at the end of the script. 
+
+```{r rmd-start}
+# What time did we start running this script? 
+start_time <- Sys.time()
+```
+
+Here, we will load in our **metadata** files, which include: 
+
+1. `data/metadata.csv`: This file contains all of our samples and also any measured variables, including station, date of collection, depth of sample, temperature, pH, salinity, etc. 
+2. `data/01_DADA2/track_read_counts.RData`: This file contains how many reads we maintained in our samples through the DADA2 workflow. 
+
+
+```{r load-metadata}
+# load in metadata
+metadata_df <- 
+  read_csv("data/metadata_amplicon_project.csv") %>%
+  # Fix Column Name
+  dplyr::rename("sample_names" = "Run") %>%
+  # Fix additional column name (so can plot metadata)
+  dplyr::rename("environment_material" = "environment_(material)") %>%
+  dplyr::rename("environment_feature" = "environment_(feature)") %>%
+  dplyr::rename("environment_biome" = "environment_(biome)") %>%
+  # Add sample names also as a column 
+  mutate(names = sample_names)
+
+
+# Inspect 
+head(metadata_df)
+dim(metadata_df)
+
+# include dada2 output
+load("data/01_DADA2/track_read_counts.RData")
+
+# Take a look
+glimpse(track_counts_df)
+dim(track_counts_df)
+
+# Check filenames 
+head(track_counts_df$sample_names)
+
+# Fix sample names in track_reads 
+track_counts_df$sample_names <- sapply(strsplit(track_counts_df$sample_names, "_"), `[`, 1)
+
+# Intuition check 
+head(track_counts_df$sample_names)
+
+# What's different? 
+setdiff(track_counts_df$sample_names, metadata_df$sample_names)
+
+# Let's do a filtering join with left_join 
+metadata_final_df <- 
+  metadata_df %>%
+  left_join(., track_counts_df, by = "sample_names") %>%
+  # sample names to the rownames to merge into phyloseq
+  column_to_rownames(var = "sample_names")
+
+# Check 
+dim(metadata_final_df)
+```
+### 1b. ASV Table 
+
+Now, let's load in the ASV count table that we created within DADA2 in `analysis/02_AssignASVs.Rmd`. 
+
+```{r load-asv-table}
+asv_df <- 
+  read.delim(file = "data/01_DADA2/ASV_table.tsv", sep = "\t",
+           # add the column names and row names 
+           header = TRUE, row.names = 1) 
+
+# Final inspection 
+head(colnames(asv_df))
+asv_df[1:3, 1:3]
+```
+### 1c. Taxonomy Table
+
+And, let's also load the taxonomy table that we created in `analysis/02_AssignASVs.Rmd`.
+
+```{r load-tax-table}
+tax_df <- 
+  read.delim("data/01_DADA2/ASV_taxonomy.tsv", sep = "\t",
+           header = TRUE, row.names = 1) 
+
+# Inspect
+dim(tax_df)
+dim(asv_df)
+
+# Add check 
+stopifnot(rownames(asv_df) == rownames(tax_df))
+```
+
+# 2. Handoff to phyloseq 
+
+This is where we will combine our metadata, asv count table, and taxonomy table into a single data S4 data object in R, which we will call `raw_physeq` for now.
+
+```{r phyloseq-handoff}
+raw_physeq <- 
+  phyloseq(otu_table(asv_df, taxa_are_rows = TRUE),
+         sample_data(metadata_final_df),
+         tax_table(as.matrix(tax_df)))
+
+# Check out 
+raw_physeq
+
+# save 
+save(raw_physeq, file = "data/03_PreProcessing/raw_physeq.RData")
+```
+
+## 3. Remove chloroplasts
+
+```{r rm-chloro}
+noChloros_physeq <- 
+  raw_physeq %>%
+  subset_taxa(Order != "Chloroplast" | is.na(Order))
+
+# How many ASVs were chloroplasts? 
+numChloros_ASVs <- ntaxa(raw_physeq) - ntaxa(noChloros_physeq)
+```
+
+There were `r numChloros_ASVs` ASVs that were chloroplasts.
+
+## 4. Remove Mitochondria 
+
+```{r rm-mitos}
+noChlorosMitos_physeq <-  
+  noChloros_physeq %>%
+  subset_taxa(Family != "Mitochondria" | is.na(Family)) 
+
+# How many ASVs were mitochondria? 
+numMitos_ASVs <- ntaxa(noChloros_physeq) - ntaxa(noChlorosMitos_physeq)
+
+```
+
+There were `r numMitos_ASVs` ASVs that were mitochondria in the data set.
+
+
+Interpretation #1: How many chloroplast and/or mitochondrial ASVs in your dataset? Does this seem reasonable?
+
+There were 36 chloroplast ASVs and 450 mitochondrial ASVs identified in my dataset. I was surprised that only 36 chloroplast ASVs were identified due to the large number of samples and how deeply sequenced this dataset is. Even though 450 mitochondrial ASVs seems like quite a large number, I think this is reasonable, given that in my dataset there are over 75 000 ASVs identified.
+
+
+# Evaluate and remove the control samples 
+
+Now, let's take a look at the negative controls and then make a decision about whether or not to remove the ASVs that we found in our controls 
+
+1. Negative controls 
+2. ASVs found within the negative controls and their distribution in the samples. 
+3. Evaluate the mock community 
+
+## 5. Negative Controls 
+
+INTERPRETATION #2: Did your dataset have any negative controls? If so, how many ASVs did you remove? Does that seem reasonable to you?
+
+No, my dataset did not have any negative controls! Because of this I did not remove any ASVs. Like Mar stated, negative controls are not optional, so it doesn't seem very reasonable to me that there were no negative controls in this dataset.
+
+## 6. Positive Controls
+
+
+INTERPRETATION #3: Did your dataset have a mock community? If so, what can you say about the accuracy of your sequencing run?
+
+My dataset did not have a mock community, so I was not able to make any conclusions about the accuracy of my sequencing run.
+
+
+# 7. Reverse Complements
+
+
+```{r reverse-complements}
+# Pull out Taxa Table
+tax_table <- 
+  noChlorosMitos_physeq %>%
+  tax_table() %>% 
+  data.frame()
+
+# Grab ASV Sequences and Names
+asv_names <- tax_table$ASV
+asv_seqs <- tax_table$ASVseqs
+
+# Create empty comparison matrix
+asv_rev_comp <- matrix(nrow=length(asv_seqs), ncol = length(asv_seqs)) 
+
+# Fix the names in the rows and columns 
+rownames(asv_rev_comp) <- asv_names
+colnames(asv_rev_comp) <- asv_names
+
+# Convert sequences to Biostrings
+asv_dna <- DNAStringSet(asv_seqs) 
+
+# Inspect 
+head(asv_dna)
+
+# Construct reverse complement
+asv_rev_dna <- reverseComplement(asv_dna) 
+
+# Now loop through every asv sequence to check 
+for(i in 1:length(asv_seqs)){ # For each asv sequence...
+  match_vec <- asv_dna[i] == asv_rev_dna # Compare it to the reverse complement of every other sequence...
+  asv_rev_comp[,i] <- match_vec # Write that logical vector as a new column 
+}
+
+# Find how many TRUEs (matches) we have, divide by 2 because each pair occurs twice
+cat("For", sum(asv_rev_comp) / 2,"ASVs, the reverse complement will need to be removed") 
+```
+
+INTERPRETATION #4: Do you have any reverse complements in your dataset?
+
+No I do not have any reverse complements that need to be removed.
+
+# 8. Sequencing Depth
+
+Let's take a look! 
+
+```{r seq-depth, fig.height=3, fig.width=8}
+# The current data objec
+noChlorosMitos_physeq
+
+# What is the library size/sequencing depth for each sample? 
+seqSums_df <- 
+  noChlorosMitos_physeq %>%
+  otu_table() %>%
+  # Sum each sample column 
+  colSums() %>%
+  data.frame() %>%
+  rownames_to_column(var = "names") %>%
+  left_join(., metadata_final_df, by = "names") 
+
+# Rename second column 
+colnames(seqSums_df)[2] <- "TotalSeqs"
+
+# check
+dim(seqSums_df)
+head(seqSums_df)
+
+# Show the depth of samples 
+seqSums_df %>%
+  dplyr::select(names, TotalSeqs) %>%
+  arrange(TotalSeqs) %>%
+  head()
+
+# plot it as a bar plot 
+numSeq_bar_plot <- 
+  seqSums_df %>%
+  ggplot(aes(x=reorder(names, TotalSeqs), y = TotalSeqs,
+             fill = environment_material)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_blank()) + 
+  labs(y = "Read Depth", x = "Sample") + 
+  theme(legend.position = "none")
+
+# histogram
+numSeq_hist_plot <- 
+  seqSums_df %>%
+  ggplot(aes(x= TotalSeqs, fill = environment_material)) + 
+  geom_histogram(color = "black") + 
+  labs(y = "# of Samples", x = "Read Depth") + 
+  theme(legend.position = "bottom")
+
+# Density plot 
+numSeq_density_plot <- 
+  seqSums_df %>%
+  ggplot(aes(TotalSeqs, fill = environment_material)) +
+  geom_density(alpha = 0.5) + 
+  labs(x = "Read Depth") + 
+  theme(legend.position = "none")
+
+# Put it all together 
+numSeq_bar_plot + numSeq_hist_plot + numSeq_density_plot + 
+  plot_annotation(tag_levels = "A") 
+```
+
+
+INTERPRETATION #5: What can you conclude about your sequencing depths? What are your sample distributions? Do you have "enough" reads? Are there any samples that should be removed at this step?
+
+
+From these plots I can conclude that the majority of my samples have a read depth between (approximately) 45000 and 100000 which is great. Something else I immediately noticed from these plots is that it appears that 15 samples have a read depth that is very low. In the code below I checked to see what the minimum sequencing depth is, and I discovered it was 533. I then made a dataframe to look at which samples had low sequencing depth. I decided to remove all the samples with a read depth below 1500, like Mar did in their example. To do this, I removed seven samples: ERR3143462, ERR3143466, ERR3143470, ERR3143474, ERR3143460, ERR3143465, ERR3143464. After doing this processing the minimum read depth for a sample is 1524. Will confirm with Mar/Sophia if this is an appropriate cutoff for my dataset.
+
+
+
+```{r rm-samps}
+# What's the min seq depth? 
+
+min(sample_sums(noChlorosMitos_physeq))
+
+
+#Making a dataframe to inspect further.
+sample_depths <- data.frame(
+  Sample = sample_names(noChlorosMitos_physeq),
+  Depth = sample_sums(noChlorosMitos_physeq)
+)
+
+# Sort it from lowest to highest
+sample_depths_sorted <- sample_depths[order(sample_depths$Depth), ]
+
+head(sample_depths_sorted, n=20)  # View lowest-depth samples
+
+# Remove the seven samples
+raw_preprocessed_physeq <- 
+  noChlorosMitos_physeq %>%
+  subset_samples(!(names %in% c("ERR3143462", "ERR3143466", "ERR3143470", 
+                                "ERR3143474", "ERR3143460", "ERR3143465", "ERR3143464")))
+
+min(sample_sums(raw_preprocessed_physeq))
+```
+
+# 9. Save Output 
+
+## Raw Preprocessed Phyloseq Object
+
+Finally, let's save our phyloseq object, which we will use for the next step! 
+
+```{r save-physeq}
+save(raw_preprocessed_physeq, file = "data/03_PreProcessing/raw_preprocessed_physeq.RData")
+```
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
