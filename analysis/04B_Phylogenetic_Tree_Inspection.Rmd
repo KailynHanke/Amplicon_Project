@@ -1,0 +1,475 @@
+---
+title: "Pruning & Rooting Phylogenetic Trees with ggTree"
+author: "Kailyn Hanke"
+date: "2025-03-30"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Goals 
+
+1. Load the [FastTree2](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0009490) unrooted tree that we calculated in `analysis/04A_Phylogenetic_Tree_Construction.Rmd` and `raw_preprocessed_physeq``.  
+2. Merge the unrooted tree to the `raw_preprocessed_phyloseq` object.  
+3. Visualize and inspect tree with [ggtree](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12628).
+4. Evaluate long branches & prune ASVs, if needed. *If your dataset has long branches, you will need to do this before rooting!!*
+5. After pruning, root the tree, ideally within the Archaea and, if not, mid-root the tree.
+6. Combine the new, rooted tree with the phyloseq object. 
+7. Save 2 phyloseq objects: 1. Unrooted tree phyloseq object, 2. Rooted tree phyloseq object. 
+
+## Inputs 
+
+1. Our previously pre-processed phyloseq object that has chloroplasts, mitochondria, reverse complements, and negative controls removed, which is located in `data/03_PreProcessing/raw_preprocessed_physeq`.
+2. The raw, unrooted maximum liklihood tree that we generated using  [FastTree2](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0009490), which is located in `data/04_PhylogeneticTree/ASVs_unrooted.tree`
+
+## Outputs 
+
+1. The output of this file will be a S4 phloseq objected called `phytree_preprocessed_physeq`, which we will save to `data/04_PhylogeneticTree/`.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      fig.align = "center",
+                      # Always relevant to the document directory 
+                      # send any figure output to this folder 
+                      fig.path = "../figures/04_PhylogeneticTree/",
+                      warning = FALSE) 
+```
+
+# Before you start
+
+## Timing of this script
+
+Let's record how long this file took to run on the class server, which we will record at the end of the script. 
+
+```{r rmd-start}
+# What time did we start running this script? 
+start_time <- Sys.time()
+```
+
+## Set my seed 
+```{r set-seed}
+# Any number can be chosen 
+set.seed(111111)
+```
+
+## Load Packages 
+```{r load-packages}
+pacman::p_load(tidyverse, phyloseq, ggtree, phytools, tidytree, phylobase,
+               install = FALSE)
+
+
+```
+
+## 1. Load Data files 
+```{r load-data}
+# Preprocessed phyloseq object 
+load("data/03_PreProcessing/raw_preprocessed_physeq.RData")
+
+# Inspect the phyloseq object 
+raw_preprocessed_physeq
+
+# Load in the tree! 
+unrooted_tree <- read.tree("data/04_PhylogeneticTree/ASVs_unrooted.tree")
+
+# Take a look at the tree
+unrooted_tree
+str(unrooted_tree)
+```
+
+# 2. Merge Unrooted Tree & `raw_preprocessed_physeq`
+
+Now that we've loaded in both our `raw_preprocessed_physeq` and the unrooted tree, let's merge them into one phyloseq object that can be used to plot the tree with ggtree. 
+
+
+```{r merge-physeq}
+# Intuition check 
+stopifnot(ntaxa(raw_preprocessed_physeq) == ntaxa(unrooted_tree))
+# No news is good news! 
+
+# Merge the tree with the phyloseq object 
+unrooted_physeq <- 
+  merge_phyloseq(raw_preprocessed_physeq, unrooted_tree)
+
+# Let's take a look! 
+unrooted_physeq
+```
+
+
+# 3. Visualize and inspect tree with [ggtree](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12628).
+
+Now, let's take a look 
+
+## Kingdom Level Tree
+
+```{r plot-tree-unrooted, fig.width=4.5, fig.height=7}
+# Make a basic tree with the domains 
+kingdom_tree <- 
+  ggtree(unrooted_physeq) + 
+  # color tips by kingdom
+  geom_tippoint(mapping = aes(color = Kingdom)) + 
+  # add a title
+  labs(title = "Unrooted Tree") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue", "grey")) + 
+  # Move the legend to the bottom of the tree 
+  theme(legend.position = "bottom")
+
+# Look at it 
+kingdom_tree
+
+# Check if tree is rooted
+is.rooted(unrooted_tree) # should be TRUE
+```
+# 4. Long Branches? 
+
+Now, let's think about the quality of our tree. Evaluate that kingdom tree above...
+
+INTERPRETATION #1: Are there any suspect branches in the raw, unrooted tree? Or does your tree look “clean”? Why or why not?
+
+Yes, there are suspect branches in the raw, unrooted tree! My tree does not look "clean" as there are long branches belonging to mostly Eukaryotic ASVs that prominently jut out from the tree.
+
+## 4a. Evaluate Long Branches
+
+### Kingdom Tree with Node Labels 
+
+Let's put labels on our tree so we have a bit more flexibility
+
+```{r kingdom-node-tree, fig.width=4.5, fig.height=7}
+kingdom_node_tree <- 
+  kingdom_tree + 
+  # Add the node label 
+  geom_text(aes(label=node), hjust= -0.5, vjust = -0.3, size = 2) 
+
+# Plot the tree
+kingdom_node_tree
+```
+
+In the phylogeny above, it is extremely dense and hard to tell what the labels are on the nodes, especially for the bacteria with extremely long branches sitting within the eukaryotes and ASVs that were labeled "NA". In order to try and distinguish some long bacterial nodes, I will first zoom in on node #115007, as it is one of the only node labels I can read. I repeated the process of identifying node #'s and looking for ancestors about 20 times in order to try and idenitfy an appropriate node to remove the eukaryotic ASVs. To keep this document easy to follow and to save time when I knot, I have only included the code for the final node I inspected.
+
+
+### Evaluate node #115007 and #115707
+
+```{r evaluate-long-branches-115007}
+# View a specific clade
+# Zoom in on node that looks potentially suspicious
+viewClade(kingdom_node_tree + 
+          labs(title = "Kingdom Tree: Node 115007"), 
+          node = 115007)
+#checking115707
+viewClade(kingdom_node_tree + 
+          labs(title = "Kingdom Tree: Node 115707"), 
+          node = 115707)
+
+
+# Lets see its ancestors, which will tell us each node as it steps up. 
+# It's ideal to look a couple nodes up but not too far!
+tidytree::ancestor(unrooted_tree, 115707)
+tidytree::ancestor(unrooted_tree, 115706)
+
+
+# Let's evaluate some more ancestors with no clear labels
+
+#viewClade(kingdom_node_tree, 115703)
+#viewClade(kingdom_node_tree, 115702)
+
+# Commented out to save time while knitting!
+```
+Here I will inspect the large clade with eukaryotes, and will remove it in the pruning step. 
+
+```{r pull-node115706}
+
+# Or if there are two nodes that we can see we can find its MRCA
+## create tibble of tree to identify offspring
+tree_tib <- as_tibble(unrooted_physeq@phy_tree)
+
+# Inspect
+head(tree_tib)
+str(tree_tib)
+
+
+# lets look at the long branch
+mrca_node_115706 <- tidytree::MRCA(unrooted_tree, .node1 = 115706, .node2 = 115702) 
+
+# Inspect
+mrca_node_115706 
+
+## create dataframe to view ASVs and taxa info and to pull the ASVs
+node_115706 <- 
+  offspring(tree_tib, mrca_node_115706, tiponly = TRUE) %>% 
+  as.data.frame() %>% 
+  pull(label)
+
+# Inspect
+#node_115706
+
+# Now, let's pull out the taxonomy information, including the ASV sequence!
+node_115706_df <- 
+  unrooted_physeq %>%
+  tax_table() %>%
+  as.data.frame() %>% 
+  filter(ASV %in% node_115706) 
+
+# Take a look: 
+glimpse(node_115706_df)
+
+# look at counts of the ASVs
+unrooted_physeq %>%
+  subset_taxa(., ASV %in% node_115706_df$ASV) %>%
+  otu_table() %>%
+  data.frame() %>%
+  colSums()
+
+```
+
+## 4b. Prune your tree
+
+Pruning my eukaryotic clade! 
+
+
+```{r prune-ASVs, eval = FALSE}
+# Function from Joey McMurdie: https://github.com/joey711/phyloseq/issues/652
+pop_taxa = function(physeq, badTaxa){
+  allTaxa <-  taxa_names(physeq)
+  allTaxa <- allTaxa[!(allTaxa %in% badTaxa)]
+  return(prune_taxa(allTaxa, physeq))
+  }
+
+# Let's use the pop_taxa function :) 
+# Recreate a phyloseq object without your unwanted ASV or node
+# Lets use the example ASVs above from node_3315_df
+unrooted_physeq_rm115706 <- 
+  unrooted_physeq %>%
+  pop_taxa(., node_115706_df$ASV)
+
+# Check it 
+unrooted_physeq_rm115706
+
+# Intuition Check: How many differ???
+ntaxa(unrooted_physeq) - ntaxa(unrooted_physeq_rm115706) 
+
+# Visually inspect 
+ggtree(unrooted_physeq_rm115706) + 
+  geom_tippoint(mapping = aes(color = Kingdom))
+
+
+```
+Investigate to see if there are any archaeal ASVs.
+```{r investigate-archaeal}
+# Is the tree rooted? 
+tidytree::is.rooted(phy_tree(unrooted_physeq))
+
+# but first find the ASVs that are Archaea
+archaeal_ASVs <- 
+  tax_table(unrooted_physeq) %>%
+  as.data.frame() %>%
+  filter(Kingdom == "Archaea") %>%
+  pull(ASV)
+
+# How many archaeal ASVs? 
+length(archaeal_ASVs)
+archaeal_ASVs
+#there are 10!
+
+#Now find how many ASVs that are Archaea in my pruned dataset
+#archaeal_ASVs_rm115706 <- 
+  #tax_table(unrooted_physeq_rm115706) %>%
+  #as.data.frame() %>%
+  #filter(Kingdom == "Archaea") %>%
+  #pull(ASV)
+
+#length(archaeal_ASVs_rm115706)
+#archaeal_ASVs_rm115706
+#note there are ten here too!
+
+# find the node that encompasses all Archaea
+archaeal_node <- 
+  phytools::findMRCA(unrooted_tree, 
+                     tips = archaeal_ASVs, type = "node")
+
+# Inspect
+archaeal_node # node = 141274
+
+# View clade to check it out
+viewClade(kingdom_tree, archaeal_node)
+viewClade(kingdom_node_tree, archaeal_node)
+```
+Highlighting the node with archaea
+
+```{r archeal-node-highlight, fig.width=4.5, fig.height=7}
+# Let's highlight! 
+node_115706_archaea <- 
+  ggtree(unrooted_physeq) + 
+  geom_tippoint(mapping = aes(color = Kingdom), size = 1.5) + 
+  #geom_text(aes(label = node), hjust = -0.7, vjust = -0.2, size = 2) +
+  geom_highlight(node = archaeal_node, fill = "goldenrod1") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue", "grey"))
+
+#Note: I probably should have named it with the archaeal node 141274
+
+# Visualize it 
+node_115706_archaea
+
+#Note: I probably should have named it with the archaeal node 141274
+
+#running it on my pruned tree
+#node_141274_archaea <- 
+  #ggtree(unrooted_physeq_rm115706) + 
+  #geom_tippoint(mapping = aes(color = Kingdom), size = 1.5) + 
+  #geom_text(aes(label = node), hjust = -0.7, vjust = -0.2, size = 2) +
+  #geom_highlight(node = archaeal_node, fill = "goldenrod1") + 
+  #scale_color_manual(values = c("firebrick3", "cornflowerblue", "grey"))
+
+#visualize pruned tree
+#node_141274_archaea
+
+#Despite highlighting the archaeal node in my code, I was not able to actually see the node highlighted in my plot (I think that there was too much other data covering the highlighted portion up)
+
+#Now I am going to remove my archaeal node in addition to my eukaryotic one, and then consult with Mar/Sophia during office hours to see if this removal was too crude/extreme.
+```
+Pruning out the archaeal node in addition to the eukaryotic one
+
+```{r final-prune}
+
+#Inspect archaeal ASV
+# lets look at the long branch
+mrca_node_141274 <- tidytree::MRCA(unrooted_tree, .node1 = 141274, .node2 = 141275) 
+
+# Inspect
+mrca_node_141274 
+
+## create dataframe to view ASVs and taxa info and to pull the ASVs
+node_141274 <- 
+  offspring(tree_tib, mrca_node_141274, tiponly = TRUE) %>% 
+  as.data.frame() %>% 
+  pull(label)
+
+# Inspect
+node_141274
+
+# Now, let's pull out the taxonomy information, including the ASV sequence!
+node_141274_df <- 
+  unrooted_physeq %>%
+  tax_table() %>%
+  as.data.frame() %>% 
+  filter(ASV %in% node_141274) 
+
+# Take a look: 
+glimpse(node_141274_df)
+
+# look at counts of the ASVs
+unrooted_physeq %>%
+  subset_taxa(., ASV %in% node_141274_df$ASV) %>%
+  otu_table() %>%
+  data.frame() %>%
+  colSums()
+
+# Function from Joey McMurdie: https://github.com/joey711/phyloseq/issues/652
+pop_taxa = function(physeq, badTaxa){
+  allTaxa <-  taxa_names(physeq)
+  allTaxa <- allTaxa[!(allTaxa %in% badTaxa)]
+  return(prune_taxa(allTaxa, physeq))
+  }
+
+#Time to prune both euk and archaeal
+unrooted_physeq_rm115706_rmarchaea <- 
+  unrooted_physeq %>%
+  pop_taxa(., node_115706_df$ASV) %>%
+  pop_taxa(., node_141274_df$ASV) 
+
+# Check it 
+unrooted_physeq_rm115706_rmarchaea
+
+# Intuition Check: How many differ???
+ntaxa(unrooted_physeq) - ntaxa(unrooted_physeq_rm115706_rmarchaea) 
+
+# Visually inspect 
+ggtree(unrooted_physeq_rm115706_rmarchaea) + 
+  geom_tippoint(mapping = aes(color = Kingdom))
+
+
+```
+
+INTERPRETATION #2: Were there any long branches in the unrooted tree? If so, did you decide to remove any ASVs from your tree? Why or why not? What data convinced you to remove each of the ASVs?
+
+Yes, in my data I removed the long branches in the eukaryotic clade in addition to the clade that contained the archaea. Since I used primers for the V3-V4 region, I was not expecting to get many archaea, and pruned the 10 I did get from my tree as I will be doing midpoint rooting. Note that I did not remove any of the longer bacterial branches outside of these clades. In office hours next week I plan to ask a few clarifying questions about removal parameters in this step, so moving forward I can feel confident about how I processed my data! What I have right now seems like a good starting point, but I want to acknowledge that I may need to refine further.
+
+# 5. Root the Tree
+
+Now that we've pruned the trees of potentially contaminating ASVs, it's time to root!
+
+### 6b. Merge phyloseq: Midpoint Rooted Tree
+
+```{r midpoint-root-tree-physeq}
+# Check to see if tree is rooted.. expect it to be false
+is.rooted(phy_tree(unrooted_physeq_rm115706_rmarchaea))
+
+# Let's midpoint root the tree
+midpoint_rooted_tree <- 
+  unrooted_physeq_rm115706_rmarchaea %>%
+  phy_tree() %>%
+  phytools::midpoint.root()
+
+# Is the new tree rooted? Should be TRUE!
+is.rooted(midpoint_rooted_tree)
+
+# Assign to a new phyloseq object!
+# Merge tree with the raw_preprocessed physeq
+midpoint_rooted_physeq <-
+  merge_phyloseq(raw_preprocessed_physeq, midpoint_rooted_tree)
+```
+### Plot Midpoint Rooted Tree
+
+```{r plot-midpoint-root-tree,fig.width=4.5, fig.height=7}
+# Quick inspection of tree 
+midpoint_rooted_tree_plot <-
+  ggtree(midpoint_rooted_physeq) + 
+  geom_tippoint(mapping = aes(color = Kingdom)) + 
+  geom_tippoint(aes(color = Kingdom)) + 
+  labs(title = "Midpoint Rooted Tree") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue", "grey"))
+
+# Look at the tree 
+midpoint_rooted_tree_plot
+
+# Add nodes 
+midpoint_rooted_tree_node_plot <- 
+  midpoint_rooted_tree_plot + 
+  geom_text(aes(label = node), hjust = -0.5, vjust = -0.3, size = 1.5) 
+
+# View it 
+midpoint_rooted_tree_node_plot
+```
+INTERPRETATION #3" and answer the question: "Now that you've rooted your tree, does the tree seem "finalized"? Are there any other branches/ASVs to inspect? Why or why not?
+
+Like I mentioned in interpretation #3, I think that my rooted tree is a great start, and it does seem "finalized", as there is no disproportionately large branch lengths or eukaryotic/archaeal ASVs. That being said, after spring break I would love some advice if I should inspect any of my longer bacterial branches (since I didn't remove any bacterial nodes outside of the ones that I removed alongside my eukaryotic and archael nodes), or if my removal of nodes was too harsh!
+
+
+## 7. Save phyloseq objects
+
+### Save individual phyloseq objects
+```{r save-phyloseq-object}
+
+# Save midpoint rooted phyloseq object
+save(midpoint_rooted_physeq, 
+     file = "data/04_PhylogeneticTree/midpoint_rooted_physeq.RData")
+```
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
