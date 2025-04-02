@@ -62,6 +62,7 @@ raw_preprocessed_physeq
 # 2. Write ASV Fasta 
 
 ```{r asv-fasta}
+
 # Pull out ASV sequences and ASV names
 asv_seq_df <- 
   raw_preprocessed_physeq@tax_table %>% 
@@ -73,7 +74,7 @@ asv_seq_df <-
 # Add the ">" to make fasta header
 asv_seq_df$ASV <- paste0(">", asv_seq_df$ASV)
 
-View(asv_seq_df)
+#View(asv_seq_df)
 
 # Create fasta object
 asv_seq_fasta <- c(rbind(asv_seq_df$ASV, asv_seq_df$ASVseqs))
@@ -87,7 +88,7 @@ write(asv_seq_fasta,
 
 
 # 3. Run Alignment with MAAFT 
-```{r run-mafft, engine = 'bash', engine.opts = '-l'}
+```{r run-mafft, engine = 'bash', engine.opts = '-l', eval = FALSE}
 # Write bash code to run MAFFT... DO CTRL+ALT+ENTER
 # First provide the path to MAFFT
 export PATH=/programs/mafft/bin:$PATH
@@ -105,7 +106,7 @@ RANDOM=111111
 # 4. Calculate the phylogenetic tree with FastTree2
 
 
-```{r run-fasttree2, engine = 'bash', engine.opts = '-l'}
+```{r run-fasttree2, engine = 'bash', engine.opts = '-l', eval = FALSE}
 # DO CTRL+ALT+ENTER to run!!!
 # Where am I? 
 echo "The working directory is $PWD"

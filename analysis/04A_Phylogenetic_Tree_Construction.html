@@ -434,6 +434,7 @@ asv_seq_df &lt;-
   data.frame() %&gt;% 
   dplyr::select(ASV, ASVseqs)
 
+#View(asv_seq_df)
 
 # Add the &quot;&gt;&quot; to make fasta header
 asv_seq_df$ASV &lt;- paste0(&quot;&gt;&quot;, asv_seq_df$ASV)
@@ -495,11 +496,11 @@ FastTree -nt -gtr -fastest -log data/04_PhylogeneticTree/FastTree.log data/04_Ph
 <pre class="r"><code># Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2025-04-01 19:42:28 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-04-02 01:12:40 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 19.124 secs</code></pre>
+<pre><code>## Time difference of 7.154 secs</code></pre>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session Information</h2>
@@ -515,7 +516,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2025-04-01
+##  date     2025-04-02
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────
