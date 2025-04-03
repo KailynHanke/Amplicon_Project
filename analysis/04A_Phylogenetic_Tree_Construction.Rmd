@@ -91,6 +91,7 @@ write(asv_seq_fasta,
 ```{r run-mafft, engine = 'bash', engine.opts = '-l', eval = FALSE}
 # Write bash code to run MAFFT... DO CTRL+ALT+ENTER
 # First provide the path to MAFFT
+# Note to increase knit speed, changed "eval = FALSE"
 export PATH=/programs/mafft/bin:$PATH
 
 # Where am I? 
@@ -108,6 +109,7 @@ RANDOM=111111
 
 ```{r run-fasttree2, engine = 'bash', engine.opts = '-l', eval = FALSE}
 # DO CTRL+ALT+ENTER to run!!!
+# Note to increase knit speed, changed "eval = FALSE"
 # Where am I? 
 echo "The working directory is $PWD"
 
