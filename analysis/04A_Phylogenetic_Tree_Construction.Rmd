@@ -88,11 +88,11 @@ write(asv_seq_fasta,
 
 
 # 3. Run Alignment with MAAFT 
-```{r run-mafft, engine = 'bash', engine.opts = '-l', eval = FALSE}
+```{r run-mafft, engine = 'bash', engine.opts = '-l'}
 # Write bash code to run MAFFT... DO CTRL+ALT+ENTER
 # First provide the path to MAFFT
 # Note to increase knit speed, changed "eval = FALSE"
-export PATH=/programs/mafft/bin:$PATH
+#export PATH=/programs/mafft/bin:$PATH
 
 # Where am I? 
 echo "The working directory is $PWD"
@@ -101,13 +101,13 @@ echo "The working directory is $PWD"
 RANDOM=111111
 
 # Now, actually run MAFFT
-/programs/mafft/bin/mafft --auto data/04_PhylogeneticTree/preprocessed_ASVs.fasta > data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta
+#/programs/mafft/bin/mafft --auto data/04_PhylogeneticTree/preprocessed_ASVs.fasta > data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta
 ```
 
 # 4. Calculate the phylogenetic tree with FastTree2
 
 
-```{r run-fasttree2, engine = 'bash', engine.opts = '-l', eval = FALSE}
+```{r run-fasttree2, engine = 'bash', engine.opts = '-l'}
 # DO CTRL+ALT+ENTER to run!!!
 # Note to increase knit speed, changed "eval = FALSE"
 # Where am I? 
@@ -115,7 +115,7 @@ echo "The working directory is $PWD"
 
 # Load fasttree 
 # Provide export path to fasttree 
-export PATH=/programs/FastTree-2.1.11:$PATH
+#export PATH=/programs/FastTree-2.1.11:$PATH
 
 # Run Fasttree to generate phylogenetic tree 
 # parameters: 
@@ -125,7 +125,7 @@ export PATH=/programs/FastTree-2.1.11:$PATH
     # -log = output a log file 
     # input alignment file 
     # specify the output tree file 
-FastTree -nt -gtr -fastest -log data/04_PhylogeneticTree/FastTree.log data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta > data/04_PhylogeneticTree/ASVs_unrooted.tree
+#FastTree -nt -gtr -fastest -log data/04_PhylogeneticTree/FastTree.log data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta > data/04_PhylogeneticTree/ASVs_unrooted.tree
 ```
 # Final info for Reproducibility 
 
