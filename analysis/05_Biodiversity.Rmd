@@ -1,0 +1,695 @@
+---
+title: "Biodiversity across a salinity gradient"
+author: "Kailyn Hanke"
+date: "2025-04-09"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.path = "../figures/05_Biodiversity/")
+```
+
+# Goals 
+
+Run an analysis on the within-sample biodiversity of the samples in our project. 
+
+1. Calculate the Hill Numbers of the samples using the iNEXT package. 
+2. Plot and evaluate the interpolated and extrapolated rarefaction curves from iNEXT. 
+3. Analyze the Hill numbers as it relates to stations and salinity (in PSU).
+4. Test and then answer the scientific question at hand! (Remember, we're doing biology!)
+
+## Inputs 
+
+1. We will need the `phytree_preprocessed_physeq`, which includes a rooted tree (ideally within the archaea!) that we created in `analysis/04B_Phylogenetic_Tree_Inspection.Rmd`. 
+
+## Outputs 
+
+1. Calculated biodiversity measures (Hill numbers) across every sample. 
+2. Figures to include in our scientific paper that visualize the data as it relates to the scientific question.
+3. Statistical tests conveying the measured and quantified changes and patterns in biodiversity.
+
+# Scientific Question
+
+## Question & Hypotheses
+
+How is microbial biodiversity modified as milk is processed in the dairy supply chain?
+
+- *Null Hypothesis:* Microbial biodiversity (*e.g.* richness) does not vary as the milk is processed (as it goes from farm bulk tank milk to its final form of skim milk powder).
+
+
+- *Alternative Hypothesis:* Microbial biodiversity (*e.g.* richness) decreases as the milk is processed.
+
+# Set up the Environment 
+
+## Timing of this script
+
+```{r rmd-start}
+# What time did we start running this script? 
+start_time <- Sys.time()
+```
+
+## Set the seed 
+```{r set-seed}
+set.seed(111111)
+```
+
+## Load Packages & Colors 
+
+```{r load-packages-colors}
+#install packages for stats
+#install.packages("rstatix")
+#install.packages("ggpubr")
+#install.packages("FSA")
+#install.packages("rstatix")
+
+
+pacman::p_load(tidyverse, devtools, patchwork, iNEXT, phyloseq,
+               # packages for stats
+               ggpubr, rstatix, FSA, install = FALSE)
+
+
+# Load in colors for plotting 
+source("code/colors.R")
+
+#Load in iNEXT data
+load("data/05_Biodiversity/iNEXT_data_cut.RData")
+```
+
+## Load in Data 
+
+```{r load-data}
+load("data/04_PhylogeneticTree/midpoint_rooted_physeq.RData")
+
+# take a look at it! 
+midpoint_rooted_physeq
+
+# Intuition check on seq depth
+range(sample_sums(midpoint_rooted_physeq)) #Range was 12 - 170404
+
+# Investigate further
+# Order sample sums from lowest to highest and show the first 20
+#head(sort(sample_sums(raw_physeq)), 20) # min = 556
+#head(sort(sample_sums(noChloros_physeq)), 20) #min = 556
+#head(sort(sample_sums(noChlorosMitos_physeq)), 20) #min = 553
+#head(sort(sample_sums(raw_preprocessed_physeq)), 20) #min = 1524
+#head(sort(sample_sums(unrooted_physeq)), 20) #min = 1524
+
+#after pruning the min changes from 1524 to 12!
+
+#head(sort(sample_sums(unrooted_physeq_rm115706)), 20) #min = 12, 04B line 245
+#head(sort(sample_sums(unrooted_physeq_rm115706_rmarchaea)), 20) #min = 12
+#head(sort(sample_sums(midpoint_rooted_physeq)), 20) #min = 12
+
+
+#Okay, good thing I ran intuition check!!
+
+#Making a dataframe to inspect further.
+sample_depths_rooted <- data.frame(
+  Sample = sample_names(midpoint_rooted_physeq),
+  Depth = sample_sums(midpoint_rooted_physeq)
+)
+
+# Sort it from lowest to highest
+sample_depths_rooted_sorted <- sample_depths_rooted[order(sample_depths_rooted$Depth), ]
+
+head(sample_depths_rooted_sorted, n=20)  # lowest depth is 12!
+
+
+# Remove the 9 samples with mins of 12 - 183
+# Removed these after the tree was already rooted - consequences??
+midpoint_rooted_physeq_cut <- 
+  midpoint_rooted_physeq %>%
+  subset_samples(!(names %in% c("ERR3143469", "ERR3143473", "ERR3143475", "ERR3143461", "ERR3143468", 
+                                "ERR3143472", "ERR3143463", "ERR3143467", "ERR3143471")))
+
+head(sort(sample_sums(midpoint_rooted_physeq_cut)), 20) #min = 4428
+
+
+```
+
+##Extra steps - miscellaneous troubleshooting!!
+
+```{r troubleshooting}
+
+# #Root tree without the 9 samples I cut above! (cut samples out before)
+# 
+# # Check to see if tree is rooted.. expect it to be false
+# is.rooted(phy_tree(unrooted_physeq_rm115706_rmarchaea))
+# 
+# 
+# #trim the 9 samples before rooting
+# 
+# unrooted_physeq_rm115706_rmarchaea_cut <- 
+#   unrooted_physeq_rm115706_rmarchaea %>%
+#   subset_samples(!(names %in% c("ERR3143469", "ERR3143473", "ERR3143475", "ERR3143461", "ERR3143468", 
+#                                 "ERR3143472", "ERR3143463", "ERR3143467", "ERR3143471")))
+# 
+# head(sort(sample_sums(unrooted_physeq_rm115706_rmarchaea_cut)), 20) #min = 4428
+# 
+# # Let's midpoint root the tree
+# midpoint_rooted_tree_Finalcut <- 
+#   unrooted_physeq_rm115706_rmarchaea_cut %>%
+#   phy_tree() %>%
+#   phytools::midpoint.root()
+# 
+# # Is the new tree rooted? Should be TRUE!
+# is.rooted(midpoint_rooted_tree_Finalcut)
+# 
+# # Assign to a new phyloseq object!
+# midpoint_rooted_physeq_Finalcut <-
+#   merge_phyloseq(raw_preprocessed_physeq, midpoint_rooted_tree_Finalcut)
+# 
+# #Plot midpoint rooted tree
+# 
+# # Quick inspection of tree 
+# midpoint_rooted_tree_Finalcut_plot <-
+#   ggtree(midpoint_rooted_physeq_Finalcut) + 
+#   geom_tippoint(mapping = aes(color = Kingdom)) + 
+#   geom_tippoint(aes(color = Kingdom)) + 
+#   labs(title = "Midpoint Rooted Tree (Cut)") + 
+#   scale_color_manual(values = c("firebrick3", "cornflowerblue", "grey"))
+# 
+# # Look at the tree 
+# midpoint_rooted_tree_Finalcut_plot
+# 
+# head(sort(sample_sums(midpoint_rooted_physeq_Finalcut)), 20) #min = 12
+# 
+# #I'm not sure why I have min = 12 again! Is it because I used raw_preprocessed_physeq for my merge step?
+# #Should I merge my original midpoint_rotted_tree with unrooted_physeq_rm115706_rmarchaea???
+# #Here I will now try merging with unrooted_physeq_rm115706_rmarchaea_cut instead...
+# 
+# # Assign to a new phyloseq object!
+# midpoint_rooted_physeq_Finalcut <-
+#   merge_phyloseq(unrooted_physeq_rm115706_rmarchaea_cut, midpoint_rooted_tree_Finalcut)
+# 
+# head(sort(sample_sums(midpoint_rooted_physeq_Finalcut)), 20) #min = 4428
+# 
+# #okay this seems promising
+# 
+# midpoint_rooted_tree_Finalcut_plot_revised <-
+#   ggtree(midpoint_rooted_physeq_Finalcut) + 
+#   geom_tippoint(mapping = aes(color = Kingdom)) + 
+#   geom_tippoint(aes(color = Kingdom)) + 
+#   labs(title = "Midpoint Rooted Tree (Cut2)") + 
+#   scale_color_manual(values = c("firebrick3", "cornflowerblue", "grey"))
+# 
+# #Got this error: Error in el[phy$edge[, 2]] <- phy$edge.length : replacement has length zero
+# #Trying to fix
+# 
+# # phyloseq object to a new object
+# midpoint_rooted_physeq_Finalcut_fixed <- unrooted_physeq_rm115706_rmarchaea_cut
+# 
+# # assign the rooted tree into the new phyloseq object
+# phy_tree(midpoint_rooted_physeq_Finalcut_fixed) <- midpoint_rooted_tree_Finalcut
+# 
+# # make sure edge lengths are present
+# phy_tree(midpoint_rooted_physeq_Finalcut_fixed)$edge.length
+# 
+# #plot it out!!
+# 
+# midpoint_rooted_tree_plot_fixed <- 
+#   ggtree(midpoint_rooted_physeq_Finalcut_fixed) +
+#   geom_tippoint(aes(color = Kingdom)) +
+#   labs(title = "Midpoint Rooted Tree (Cut) — Fixed") +
+#   scale_color_manual(values = c("firebrick3", "cornflowerblue", "grey")) +
+#   theme(legend.position = "bottom")
+# 
+# # view plot
+# 
+# midpoint_rooted_tree_plot_fixed
+
+```
+
+##Let's continue with midpoint_rooted_physeq_cut
+
+```{r continue-load}
+
+# Intuition check on seq depth
+min(sample_sums(midpoint_rooted_physeq_cut))
+
+# Make a metadata dataframe 
+metadata_df_cut <- 
+  midpoint_rooted_physeq_cut %>%
+  sample_data() %>%
+  data.frame()
+
+# view of it
+glimpse(metadata_df_cut)
+```
+
+
+# Biodiversity Hill Numbers with iNEXT
+
+```{r iNEXT-biodiversity}
+# prepare the input data 
+# Species in rows and the samples in columns 
+iNEXT_input_df_cut <- 
+  midpoint_rooted_physeq_cut %>%
+  otu_table() %>%
+  data.frame()
+
+# Inpect 
+dim(iNEXT_input_df_cut)
+iNEXT_input_df_cut[1:5, 1:5]
+
+# Run iNEXT 
+# Remember to set the seed!
+# ASVs in ROWs, samples in COLUMNS 
+#iNEXT_data_cut <- iNEXT(iNEXT_input_df_cut, 
+                   #q = c(0, 1, 2),
+                   #datatype = "abundance")
+
+# Inspect 
+str(iNEXT_data_cut)
+typeof(iNEXT_data_cut)
+
+save(iNEXT_data_cut, file = "data/05_Biodiversity/iNEXT_data_cut.RData")
+```
+
+
+# Rarefaction Curves 
+
+## `ggiNEXT` Rarefaction Curves 
+
+```{r iNEXT-colors}
+# Prepare Colors 
+color_df_cut <- 
+  iNEXT_input_df_cut %>%
+  colnames() %>%
+  data.frame()
+# Check
+head(color_df_cut)
+# Rename the column 
+colnames(color_df_cut)[1] <- "names"
+# Check
+head(color_df_cut)
+
+
+# Make a helper dataframe for plotting with colors 
+iNEXT_color_df_cut <- 
+  color_df_cut %>%
+  # Merge with metadata
+  left_join(metadata_df_cut, by = "names") %>%
+  # Merge with colors for plotting with ggiNEXT
+  left_join(data.frame(environment_colors = environment_colors,
+            environment_material = names(environment_colors)),
+            by = "environment_material")
+
+head(iNEXT_color_df_cut)
+dim(iNEXT_color_df_cut)
+```
+
+```{r plot-iNEXT-rarefaction}
+ggiNEXT(iNEXT_data_cut, type = 1, facet.var = "Order.q") + 
+  scale_color_manual(values = iNEXT_color_df_cut$environment_colors) + 
+  scale_fill_manual(values = iNEXT_color_df_cut$environment_colors) + 
+  scale_shape_manual(values = base::rep(17, nsamples(midpoint_rooted_physeq_cut))) + 
+  theme_bw() + 
+  theme(legend.position = "none") + 
+  labs(y = "Effective Number of ASVs", x = "Number of Sequences") 
+```
+Remembering that an Order q of:  
+
+  - 0 = Richness/ Number of Total taxa
+  - 1 = Exponential Shannon / Number of "Common" taxa
+  - 2 = Inverse Simpson / Number of "Dominant" taxa
+  
+  1. The best gift of the Hill Numbers: *All three diversity measures are on the same x-axis: The Effective Number of Species or ASVs.*  
+2. As q increases from 0 to 1 to 2, the abundance of the species is weighted more, so the rarefaction curve plateaus earlier. This is important because it **indicates that richness is the most sensitive to sequencing depth!** However, Shannon and even less sensitive is Simpson.  
+3. Most of the sample rarefaction curves appear to plateau but we need to look deeper to truly confirm this.  
+4. There appears to be a sample with much lower richness than the rest of the dataset. Let's keep our eyes on this sample... 
+
+
+
+## Manual Rarefaction Curves 
+
+```{r manual-rarefaction}
+str(iNEXT_data_cut)
+
+iNEXT_manual_df_cut <- 
+  iNEXT_data_cut$iNextEst$size_based %>%
+  dplyr::rename(names = Assemblage) %>%
+  # join with the metadata
+  left_join(., metadata_df_cut, by = "names") %>%
+  mutate(station = factor(environment_material, levels = c("Bulk Tank Milk", 
+                                              "Collection Tanker Milk",
+                                              "Skimmed Milk Powder",
+                                              "Skimmed Milk Silo",
+                                              "Whole Milk Silo",
+                                              "Cream Silo")))
+
+# Inspection
+dim(iNEXT_manual_df_cut)
+
+# Manually plot rarefaction curves 
+iNEXT_manual_df_cut %>%
+  # Filter out rows that are calculated with actual sequences (no extrapolated)
+  dplyr::filter(Method == "Rarefaction") %>%
+  # Now, let's draw the plot! 
+  ggplot(aes(x = m, y = qD, color = environment_material, group = names)) + 
+  geom_line() + 
+  # Facet by environment_material 
+  facet_grid(Order.q~environment_material, scales = "free") + 
+  scale_color_manual(values = environment_colors) + 
+  theme_bw() + 
+  labs(y = "Effective Number of ASVs", x = "Number of Sequences") + 
+  theme(legend.position = "bottom")
+```
+
+INTERPRETATION #1:  What can you conclude from the ggiNEXT and manual rarefaction curve plots? Are there "enough" sequences to analyze the samples? Is it valid to make any conclusions about species richness when q = 0? What about when q = 1? Or q = 2? Why or why not?
+
+
+My initial analysis:
+
+- *Richness: q = 0*  
+    - All the samples with richness plateau, so yes, I think we can make conclusions about the observed richness because we have "enough" sequences to analyze the samples; the samples have been sequenced deeply enough to measure ASV richness. This also goes for my other two measures of alpha diversity. 
+    - You can very clearly see that the "Bulk Tank Milk" samples have the highest total ASVs, followed by the "Collection Tanker" samples. The rest of the sample types had much lower observed richness. This is quite cool to see, as these preliminary observations align with my alternative hypothesis that microbial biodiversity (*e.g.* richness) decreases as the milk is processed. Also I want to note that there was only one sample collected from a cream silo, it is not an artefact of my pruning/trimming.
+    
+- *Shannon Diversity: q = 1*
+    - Similar to what we see in the Salinity Gradient data, here, the trends that we were starting to see when looking at richness are more amplified when looking at Shannon diversity!!
+    -It appears as though "Skimmed Milk Powder" and "Skimmed Milk Silo" have bimodal distributions.
+    
+- *Simpson's Diversity: q = 2* 
+    - It appears as though the "Skimmed Milk Powder" and "Skimmed Milk Silo" samples have bimodal distributions.
+      - "Skimmed Milk Powder" samples: tend to have more dominant taxa/higher diversity with ~25 dominant species versus samples that have lower diversity around ~15 species.
+      - "Skimmed Milk Silo" samples: tend to have more dominant taxa/higher diversity with ~25-30 dominant species versus samples that have lower diversity around ~10-15 species.
+    
+
+##Testing to see if my data is "normal"
+
+The Shapiro-Wilk test calculates a **W statistic** by comparing the order statistics (sorted values) of your data with those expected from a normal distribution.
+
+- **W ≈ 1** → data is close to normal.
+- **W < 1** → increasing deviation from normality.
+
+What hypothses does the Shapiro-Wilk Test? 
+
+- *Null hypothesis (H₀):* The data are normally distributed.
+    - *p-value > 0.05*: Fail to reject H₀ and the data appears normal.
+- *Alternative hypothesis (H₁):* The data are *not* normally distributed.
+    - *p-value < 0.05*: We can reject the H₀, which will indicate that the data is **not normal**.
+
+#Run Shapiro-Wilk for richness, shannon and simpson
+
+
+```{r shapiro-wilk-richness}
+### Now what about for richness? 
+obs_div_df_cut <- 
+  iNEXT_manual_df_cut %>%
+  dplyr::filter(Method == "Observed") 
+
+# check it
+glimpse(obs_div_df_cut)
+
+# Look at richness 
+obs_whole_rich_df_cut <- 
+  obs_div_df_cut %>%
+  dplyr::filter(Order.q == 0)
+
+# Test of the data is normal for richness
+shapiro.test(obs_whole_rich_df_cut$qD)
+
+# Look at shannon 
+obs_whole_rich_df_cut <- 
+  obs_div_df_cut %>%
+  dplyr::filter(Order.q == 1)
+
+# Test of the data is normal for shannon
+shapiro.test(obs_whole_rich_df_cut$qD)
+
+
+# Look at simpson 
+obs_whole_rich_df_cut <- 
+  obs_div_df_cut %>%
+  dplyr::filter(Order.q == 2)
+
+# Test of the data is normal for simpson
+shapiro.test(obs_whole_rich_df_cut$qD)
+
+```
+
+Indicated richness is not normal! p-value = 7.652e-06 (p-value < 0.05)
+
+Looking at diversity by sample type (where the sample was coming from, ex. Bulk Tank, Skim Milk Powder etc.)
+
+### Diversity by Sample Type 
+
+```{r make-obs-df}
+# Plot boxplots by sample type against diversity
+obs_div_df_cut %>%
+  ggplot(aes(x = environment_material, y = qD, fill = environment_material, 
+             color = environment_material)) + 
+  facet_wrap(.~Order.q, scales = "free_y") + 
+  geom_jitter() + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+  labs(y = "Effective Number of ASVs") + 
+  theme_bw() + 
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30,
+                                   hjust = 1, 
+                                   vjust = 1))
+
+```
+
+#Statistically Test Richness
+
+```{r sample-diversity-richness, fig.height=4, fig.width=4}
+
+#Use this chunk to run stats on richness
+#Right now, would need to use not normal test 
+
+# Pull out richness data 
+obs_rich_df_cut <- 
+  obs_div_df_cut %>%
+  dplyr::filter(Order.q == 0)
+
+obs_rich_df_cut$environment_material <- factor(
+  obs_rich_df_cut$environment_material,
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Cream Silo",
+             "Skimmed Milk Powder", "Skimmed Milk Silo", "Whole Milk Silo")
+)
+
+
+# Perform Kruskal-Wallis test on richness by sample type
+kruskal_sample_rich <- obs_rich_df_cut %>%
+  kruskal_test(qD ~ environment_material)
+
+
+# Look at it 
+kruskal_sample_rich
+
+```
+
+p-value: 5.952e-11
+
+This is extremely small (0.00000000005952), meaning the test found a highly significant difference in richness across at least some of the groups.
+
+I am now going to run a post hoc test (Dunn's test) to see which groups differ!
+
+
+```{r post-hoc}
+
+# post-hoc test with Dunn's Test
+dunn_sample_envmat_rich <- 
+  obs_rich_df_cut %>%
+  dunn_test(qD ~ environment_material, p.adjust.method = "fdr") %>%
+  add_xy_position(x = "environment_material")
+
+
+# look at the pairwise
+dunn_sample_envmat_rich
+
+
+#plot it
+richness_boxplot_envmat <- 
+  ggboxplot(obs_rich_df_cut, 
+            x = "environment_material", 
+            y = "qD", 
+            color = "environment_material", 
+            fill = "environment_material", 
+            alpha = 0.3,
+            outlier.shape = NA) + 
+  geom_jitter(aes(color = environment_material), width = 0.2, size = 1.5) + 
+  labs(y = "Observed Richness (q = 0)", 
+       title = "Observed Richness by Environment Material") + 
+  stat_pvalue_manual(dunn_sample_envmat_rich, hide.ns = TRUE,
+                     tip.length = 0, step.increase = 0.01) +
+  labs(subtitle = get_test_label(kruskal_sample_rich, detailed = TRUE),
+       caption = get_pwc_label(dunn_sample_envmat_rich)) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+#look at it
+richness_boxplot_envmat
+
+
+levels(factor(obs_rich_df_cut$environment_material))
+unique(dunn_sample_envmat_rich$group1)
+unique(dunn_sample_envmat_rich$group2)
+
+
+```
+
+#Statistically Test Shannon Diversity
+
+```{r sample-diversity-shannon, fig.height=4, fig.width=4}
+
+# Pull out shannon data 
+obs_shannon_df <- obs_div_df_cut %>%
+  dplyr::filter(Order.q == 1)
+
+obs_shannon_df$environment_material <- factor(
+  obs_shannon_df$environment_material,
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Cream Silo",
+             "Skimmed Milk Powder", "Skimmed Milk Silo", "Whole Milk Silo")
+)
+
+# Perform Kruskal-Wallis test on Shannon Diversity by sample type
+kruskal_sample_shannon <- obs_shannon_df %>%
+  kruskal_test(qD ~ environment_material)
+
+# post-hoc test with Dunn's Test
+dunn_sample_shannon <- obs_shannon_df %>%
+  dunn_test(qD ~ environment_material, p.adjust.method = "fdr") %>%
+  add_xy_position(x = "environment_material")
+
+# look at the pairwise
+dunn_sample_shannon
+
+#plot it
+shannon_boxplot_envmat <- 
+  ggboxplot(obs_shannon_df, 
+            x = "environment_material", 
+            y = "qD", 
+            color = "environment_material", 
+            fill = "environment_material", 
+            alpha = 0.3,
+            outlier.shape = NA) + 
+  geom_jitter(aes(color = environment_material), width = 0.2, size = 1.5) + 
+  labs(y = "Shannon Diversity (q = 1)", 
+       title = "Shannon Diversity by Environment Material") + 
+  stat_pvalue_manual(dunn_sample_shannon, hide.ns = TRUE,
+                     tip.length = 0, step.increase = 0.01) +
+  labs(subtitle = get_test_label(kruskal_sample_shannon, detailed = TRUE),
+       caption = get_pwc_label(dunn_sample_shannon)) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+#look at it
+shannon_boxplot_envmat
+```
+
+#Statistically Test Simpson Diversity
+
+```{r sample-diversity-simpson, fig.height=4, fig.width=4}
+
+# Pull out simpson data 
+obs_simpson_df <- obs_div_df_cut %>%
+  dplyr::filter(Order.q == 2)
+
+obs_simpson_df$environment_material <- factor(
+  obs_simpson_df$environment_material,
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Cream Silo",
+             "Skimmed Milk Powder", "Skimmed Milk Silo", "Whole Milk Silo")
+)
+
+# Perform Kruskal-Wallis test on simpson Diversity by sample type
+kruskal_sample_simpson <- obs_simpson_df %>%
+  kruskal_test(qD ~ environment_material)
+
+
+# post-hoc test with Dunn's Test
+dunn_sample_simpson <- obs_simpson_df %>%
+  dunn_test(qD ~ environment_material, p.adjust.method = "fdr") %>%
+  add_xy_position(x = "environment_material")
+
+# look at the pairwise
+dunn_sample_simpson
+
+#plot it
+simpson_boxplot_envmat <- 
+  ggboxplot(obs_simpson_df, 
+            x = "environment_material", 
+            y = "qD", 
+            color = "environment_material", 
+            fill = "environment_material", 
+            alpha = 0.3,
+            outlier.shape = NA) + 
+  geom_jitter(aes(color = environment_material), width = 0.2, size = 1.5) + 
+  labs(y = "Simpson Diversity (q = 2)", 
+       title = "Simpson Diversity by Environment Material") + 
+  stat_pvalue_manual(dunn_sample_simpson, hide.ns = TRUE,
+                     tip.length = 0, step.increase = 0.01) +
+  labs(subtitle = get_test_label(kruskal_sample_simpson, detailed = TRUE),
+       caption = get_pwc_label(dunn_sample_simpson)) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+#look at it
+simpson_boxplot_envmat
+
+#combine the plots
+
+richness_boxplot_envmat + shannon_boxplot_envmat + simpson_boxplot_envmat
+
+```
+INTERPRETATION #2:  If you have categorical data, what can you conclude regarding the role that all ASVs (richess, q = 0) versus common ASVs (Shannon, q = 1) versus dominant ASVs (Simpson, q = 2) have on the biodiversity of your samples as it relates to your variable of interest?
+
+Note that my variable of interest is sample type, which describes the step/stage in the dairy processing chain the sample came from!
+
+Richness (q = 0):
+  - Richness measures the total number of observed ASVs, including the rare taxa. Only a few pairwise comparisons showed significant differences between sample types. Significant differences were found between between the Bulk Tank Milk samples and both Skimmed Milk Powder Samples and Whole Milk Silo samples. There was also a significant difference in richness between the Collection Tanker Milk samples and Skimmed Milk Silo samples. 
+
+Shannon Diversity (q = 1): 
+  - Shannon diversity weighs taxa by their relative abundance, placing more emphasis on common ASVs while still considering rare ones. Of the three alpha diversity metrics we used, Shannon diversity had the most pairwise differences that were significant. The Shannon diversity of the Bulk Tank Milk samples was significantly different from all of the other sample types except the Cream Silo samples. Like we saw with the richness data, there was also a significant difference in Shannon diversity between the Collection Tanker Milk samples and Skimmed Milk Powder samples.
+  
+Simpson Diversity (q=2):
+  - Simpson diversity emphasizes the most abundant ASVs (the dominant ASVs) in the community. The Simpson diversity of the Bulk Tank Milk samples was significantly different from all of the other sample types except the Cream Silo samples. There was no significant difference in the Simpson diversity between the Collection Tanker Milk samples and Skimmed Milk Powder, like was found in both the richness and Shannon.
+
+
+Note that in all three measures used, Bulk Tank Milk samples had the highest alpha diversity. Also note that in all three measures of alpha diversity there were no significant differences between Bulk Tank Milk and Cream Silo. I believe this is simply because the Cream Silo has an n = 1 (only one sample from the cream silo was taken) and thus no pairwise comparisons between Cream Silo and other sample types would be seen as statistically significant.
+
+
+I think that these results suggest that potentially common ASVs could be important contributors to the variation observed between different sample types, as Shannon diversity captures changes in community evenness and is more sensitive to differences in moderately abundant taxa. I think these results also indicate that dominant taxa also differ between environments, but perhaps not as strongly or as consistently as the broader group of common taxa.
+
+INTERPRETATION #3:  How did you statistically test your scientific question in Interpretation #2? Why?
+
+
+To statistically test my scientific question, I first ran a Kruskal-Wallis test for each alpha diversity measure I was assessing (richness, Shannon diversity, Simpson diversity). I chose the Kruskal-Wallis test because my data was NOT normally distributed (which I identified with the Shapiro-Wilk normality test) and I wanted to compare alpha diversity between more than two groups. As Mar explained in class, Kruskal-Wallis is sort of the non-parametric alternative to the parametric ANOVA test.
+
+
+All of my Kruskal-Wallis tests identified at least one significant difference between my groups, so I followed up with a post hoc test (Dunn's test). To identify which pairs of groups were significantly different. I also applied p-value corrections (FDR), like Mar did in their analysis, which I believe controls the expected proportion of false positive discoveries among all rejected null hypotheses.
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
+
