@@ -4,3 +4,4 @@ data/01_DADA2/raw_ASV_counts.tsv
 data/01_DADA2/ASV_table_withSeqNames.tsv
 data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta
 data/04_PhylogeneticTree/FastTree.log
+data/03_PreProcessing/raw_physeq.RData
