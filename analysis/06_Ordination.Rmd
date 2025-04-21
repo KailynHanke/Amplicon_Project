@@ -366,7 +366,6 @@ Both Sorensen and Bray-Curtis distance matrices showed significant results (p = 
 
 From these results, I understood that there is significant differences in the microbial communities depending on how far along the milk is in its processing pipeline, essentially there are differences in the microbial communities in the milk when it is at different stages in the processing pipeline. While these F-statistic results aren't as high as the ones we saw in the class analysis, I still think that these values show that there are meaningful clustering based on sample type.
 
-
 Since Bray-Curtis explained slightly more variation than Sorensen, I interpreted this to mean that not only are there different taxa present in the communities, as determined by using Sorensen, but that the relative abundances of these taxa also further contribute to the differences we are seeing in microbial compositions between the sample groups.
 
 
