@@ -602,7 +602,11 @@ head(sort(sample_sums(midpoint_rooted_physeq_cut)), 20) #min = 4428</code></pre>
 # 
 # midpoint_rooted_tree_plot_fixed</code></pre>
 <p>##Let’s continue with midpoint_rooted_physeq_cut</p>
-<pre class="r"><code># Intuition check on seq depth
+<pre class="r"><code># Save midpoint rooted phyloseq object
+save(midpoint_rooted_physeq, 
+     file = &quot;data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData&quot;)
+
+# Intuition check on seq depth
 min(sample_sums(midpoint_rooted_physeq_cut))</code></pre>
 <pre><code>## [1] 4428</code></pre>
 <pre class="r"><code># Make a metadata dataframe 
@@ -1505,21 +1509,23 @@ difference between my groups, so I followed up with a post hoc test
 different. I also applied p-value corrections (FDR), like Mar did in
 their analysis, which I believe controls the expected proportion of
 false positive discoveries among all rejected null hypotheses.</p>
-</div>
-</div>
-</div>
-<div id="final-info-for-reproducibility" class="section level1">
-<h1>Final info for Reproducibility</h1>
-<div id="check-render-time" class="section level2">
-<h2>Check Render Time</h2>
-<pre class="r"><code># Take the time now that we are at the end of the script
+<pre><code>
+
+
+# Final info for Reproducibility 
+
+## Check Render Time
+
+``` r
+# Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2025-04-11 11:58:41 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-04-21 11:45:04 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 18.356 secs</code></pre>
+<pre><code>## Time difference of 21.499 secs</code></pre>
+</div>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session Information</h2>
@@ -1535,7 +1541,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2025-04-11
+##  date     2025-04-21
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────
