@@ -91,6 +91,9 @@ source("code/functions.R")
 ```{r load-data}
 
 # load phyloseq object
+#load("data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
+#midpoint_rooted_physeq_cut
+
 load("data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
 midpoint_rooted_physeq_cut
 
@@ -108,6 +111,9 @@ midpoint_rooted_physeq_cut
 #midpoint_rooted_physeq_cut <- get("midpoint_rooted_physeq_cut")
   
 #also did not work!
+#load dataframe
+metadata_df_cut <- read.csv("data/05_Biodiversity/metadata_df_cut.csv", row.names = 1)
+
 
 
 # Intuition check on seq depth
@@ -211,7 +217,7 @@ INTERPRETATION #2:  Evaluating the above plots, what did you scale the read coun
 
 When looking at the above plots, I scaled ny read counts to 4428 in my dataset. I landed on this number based on following the class dataset in my earlier processing steps. I got rid of outliers, and samples with low sequencing depth relative to the rest of my samples. Note that in the class dataset, they discarded any samples with sequencing depth less than ~1500, since my dataset is much more deeply sequenced, I upped this value to ~4500. It also looked like the rarefaction curves plateaued in all my samples when I did a visual analysis.
 
-I am honestly very unsure if this is a sufficient number to perform a beta-diversity analysis and accurately compare my data to one another, as I have a very large range in sequencing depth for my data: min = 4428, max = 170 404.The linear model suggests a statistically significant positive relationship between total sequencing depth and ASV richness, with a p-value of 0.00497 for the slope.But the R-squared value is pretty low (0.04), meaning that even though there is a statistically significant relationship between number of ASVs and sequence depth, but it is very weak and only explains about 4% of the variation. I think this means that sequencing depth is not the main factor that is driving differences in ASV richness.
+I am honestly unsure if this is a sufficient number to perform a beta-diversity analysis and accurately compare my data to one another, as I have a very large range in sequencing depth for my data: min = 4428, max = 170 404.The linear model suggests a statistically significant positive relationship between total sequencing depth and ASV richness, with a p-value of 0.00497 for the slope. But the R-squared value is pretty low (0.04), meaning that even though there is a statistically significant relationship between number of ASVs and sequence depth, but it is very weak and only explains about 4% of the variation. I think this means that sequencing depth is not the main factor that is driving differences in ASV richness.
 
 
 # 3. Scale Read Counts 
@@ -288,7 +294,7 @@ scaledSeq_histogram + scaledSeq_vs_numASV_plot +
 INTERPRETATION #3:  Evaluate the scaled read count plots above. Are the total number of sequences across all of your samples in the same general range? What is the minimum and maximum (i.e., the range) of the sequencing depth? How was the relationship with the number of ASVs modified after scaling the read counts?
 
 
-Yes, the total number of sequences across all of your samples are in the same general range (4291-4462 sequences) and have a total count of 171 sequences in this range. Something that is concerning, is that in my scaled sequence depth vs. # ASVs plot the max number of ASVs shown is just under 700, while on my original plot I discussed in interpretation #2 the max number of ASVs was ~2500. I plan to ask Mar/Sophia during office hours before I submit my assignment, but I will move forward with my scaled reads for now.
+Yes, the total number of sequences across all of my samples are in the same general range (4291-4462 sequences) and have a total count of 171 sequences in this range. Something that is concerning, is that in my scaled sequence depth vs. # ASVs plot the max number of ASVs shown is just under 700, while on my original plot I discussed in interpretation #2 the max number of ASVs was ~2500. I plan to ask Mar/Sophia during office hours before I submit my assignment, but I will move forward with my scaled reads for now.
 
 # Beta Diversity: Dissimilarity Metrics in Microbial Ecology
 
@@ -319,7 +325,7 @@ INTERPRETATION #4:  Which dissimilarity metric is most related to your scientifi
 
 My broad scientific question is very general: How is microbial biodiversity modified as milk is processed in the dairy supply chain?
 
-Because of this. it could be related to any of the dissimilarity metrics we've discussed. But with the way I've framed my null hypothesis and alternative hypothesis #1, I want to first focus on looking how my samples differ in presence/absence of species. So I would like to focus my analysis first on using Sorensen (Sorensen over Jaccard because I want to gove greater weight to shared species). In my initial anlysis I really just wnat to focus on who's there!! Then, I would like to incorporate abundance data and use Bray-Curtis when assessing alternative hypothesis #2!
+Because of this, it could be related to any of the dissimilarity metrics we've discussed. But with the way I've framed my null hypothesis and alternative hypothesis #1, I want to first focus on looking how my samples differ in presence/absence of species. So I would like to focus my analysis first on using Sorensen (Sorensen over Jaccard because I want to give greater weight to shared species). In my initial analysis I really just want to focus on who's there!! Then, I would like to incorporate abundance data and use Bray-Curtis when assessing alternative hypothesis #2!
 
 
 
