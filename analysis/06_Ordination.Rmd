@@ -1,0 +1,558 @@
+---
+title: "Between-Sample (Beta) Diversity of microbes in dairy samples"
+author: "Kailyn Hanke"
+date: "2025-04-19"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.path = "../figures/06_Ordination/")
+```
+
+# Goals 
+
+1. Load in phyloseq data with rooted tree & colors and functions.  
+2. Evaluate sequencing depth and remove samples, if needed.  
+3. Normalize the read counts between samples.  
+4. Calculate community **dis**similarities. Numbers between 0 and 1. If 0, completely similar versus if they are 1, then they're completely dissimilar.   
+    a. **Sorensen**: Shared Species as a binary value: Abundance-unweighted 
+    b. **Bray-Curtis**: Shared Abundant species: Abundance-weighted
+    c. **(Abundance-)Weighted UNIFRAC**: Consider Abundant Species and where they fall on the tree  
+5. Run statistics with functions from the vegan R package: 
+    a. PERMANOVA with `adonis2()`.
+    b. betadispR with `betadisper()` and `permutest()`. 
+6. Visualize the community data with two unconstrained Ordinations:  
+    a. **PCoA**: Linear Method. Eigenvalue = how much variation is explained by each axis. Choose to view axis 1, 2, 3, etc. and plot them together.  
+    b. **NMDS**: Non-linear. Smush multiple Dimensions into 2 or 3 axes. Need to report Stress value (ideally <0.15).
+    
+    
+## Inputs 
+
+1. We will need the `phytree_preprocessed_physeq.RData`, which includes a rooted tree (ideally within the archaea!) that we created in `analysis/04B_Phylogenetic_Tree_Inspection.Rmd`. 
+
+## Outputs 
+
+1. Calculated beta-diversity dissimilarity measures (*e.g.* Sorensen, Bray-Curtis, abundance-unweighted and -weighted UniFrac) across every sample. 
+2. Ordination figures (*i.e.,* PCoA/NMDS) to include in the scientific paper that visualize the data as it relates to the scientific question.
+3. Statistical tests (*i.e.,* PERMANOVA & betadisper) conveying the measured and quantified changes and patterns in biodiversity.
+
+
+# Scientific Question 
+
+INTERPRETATION #1:  What is your scientific question and hypotheses? Do they relate to abundance? Presence/absence? Phylogeny?
+
+
+Scientific Question: How is microbial biodiversity modified as milk is processed in the dairy supply chain?
+
+- *Null Hypothesis:* Microbial biodiversity (*e.g.* Sorensen) does not vary as the milk is processed (as it goes from farm bulk tank milk to its final form of skim milk powder).
+
+- *Alternative Hypothesis #1:* Microbial composition (*e.g.* Sorensen) will become more dissimilar as the dairy samples move further along the supply chain. There is an inverse relationship between richness and how processed the dairy samples are.
+
+- *Alternative #2 Hypothesis*: Dominant members of the microbial community (*e.g.* Bray-Curtis) are unique in Bulk Tank samples (least processed) compared to Skimmed Milk Powder samples (most processed). 
+
+
+I would like my null hypothesis and alternative hypothesis #1 to relate to presence absence, while I would like my alternative hypothesis #2 to relate more to abundance (focuses on dominant species). 
+
+# Set up 
+
+## Timing of this script
+
+```{r rmd-start}
+# What time did we start running this script? 
+start_time <- Sys.time()
+```
+
+## Set the seed
+
+```{r set-seed}
+set.seed(111111)
+```
+
+
+## Load Packages, colors & functions  
+```{r load-packages}
+pacman::p_load(tidyverse, devtools, phyloseq, patchwork, vegan, 
+               install = FALSE)
+
+# Load Colors 
+source("code/colors.R")
+
+# Load functions 
+source("code/functions.R")
+
+
+```
+
+# 1. Load in the data 
+
+```{r load-data}
+
+# load phyloseq object
+load("data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
+midpoint_rooted_physeq_cut
+
+#this didn't work when knitting for some reason
+
+#try loading absolute path
+#load("/local/workdir/kah357/Amplicon_Project/data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
+
+#check to see if the file exists
+#file.exists("/local/workdir/kah357/Amplicon_Project/data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
+
+#TRUE! It exists!!
+
+# Advice of CHatGPT: explicitly assign again (redundant but safe for knitting)
+#midpoint_rooted_physeq_cut <- get("midpoint_rooted_physeq_cut")
+  
+#also did not work!
+
+
+# Intuition check on seq depth
+min(sample_sums(midpoint_rooted_physeq_cut))
+
+#Check Range and median
+range(sample_sums(midpoint_rooted_physeq_cut)) #min:4428 #max:170404
+median(sample_sums(midpoint_rooted_physeq_cut)) #median: 60989
+
+
+# Create a data frame of sample names and their sequence depths
+sample_depths_df <- data.frame(
+  Sample = sample_names(midpoint_rooted_physeq_cut),
+  Depth = sample_sums(midpoint_rooted_physeq_cut)
+)
+
+# Sort by depth from lowest to highest
+sample_depths_sorted <- sample_depths_df[order(sample_depths_df$Depth), ]
+
+# View the 50 samples with the lowest sequence depth
+head(sample_depths_sorted, 50)
+
+#Bottom 5
+#Sample Depth
+#ERR3141454 ERR3141454  4428
+#ERR3141501 ERR3141501  9143
+#ERR3141434 ERR3141434  9920
+#ERR3141489 ERR3141489 17924
+#ERR3141496 ERR3141496 18811
+
+#Ask: Cut bottom 3?
+#Did not do the "remove the outlier step" that Mar did to remove  `20210615-MA-ABB2F`
+
+```
+
+# Normalizing the Read Depth 
+
+## 2. Explore the Raw Read Counts 
+
+```{r explore-read-counts, fig.width=6, fig.height=3}
+# calculate read counts per sample 
+raw_TotalSeqs_df <- 
+  midpoint_rooted_physeq_cut %>%
+  # Calculate the total number of sequences/reads
+  sample_sums() %>%
+  data.frame()
+
+# Take a look 
+head(raw_TotalSeqs_df)
+
+#Ask: not F and R
+
+# Rename the column 
+colnames(raw_TotalSeqs_df)[1] <- "TotalSeqs"
+
+# add a new column of num_ASVs (RAW, non-noramlized # ASVs)
+raw_TotalSeqsASVs_df <- 
+  raw_TotalSeqs_df %>%
+  mutate(num_ASVs = colSums(otu_table(midpoint_rooted_physeq_cut) > 1))
+
+#View(raw_TotalSeqsASVs_df)
+
+# Plot histogram of seq depth 
+# Plot full histogram of sequencing depth with no bin or axis limits
+rawSeq_histogram <- 
+  raw_TotalSeqsASVs_df %>%
+  ggplot(aes(x = TotalSeqs)) + 
+  geom_histogram() +  # let ggplot decide bins automatically
+  labs(title = "Raw Seq Depth Histogram", 
+       x = "Total Sequences", 
+       y = "Number of Samples") + 
+  theme_bw()
+
+# Print the plot
+rawSeq_histogram
+
+
+# Plot Seq Depth versus num_ASVs
+rawSeq_vs_numASV_plot <- 
+  raw_TotalSeqsASVs_df %>%
+  ggplot(aes(x = num_ASVs, y = TotalSeqs)) + 
+  geom_point() + 
+  scale_y_continuous() +
+  geom_smooth(method = "lm") + 
+  labs(title = "Seq Depth vs # ASVs") + 
+  theme_bw()
+
+# Print the plot
+rawSeq_vs_numASV_plot
+
+# is it significant? 
+summary(lm(TotalSeqs ~ num_ASVs, data = raw_TotalSeqsASVs_df))
+
+# Put the two plots together.
+rawSeq_histogram + rawSeq_vs_numASV_plot +
+  plot_annotation(tag_levels = "A")
+```
+
+INTERPRETATION #2:  Evaluating the above plots, what did you scale the read counts to in your dataset? Why did you choose that number? Do you think it is sufficient to perform a beta-diversity analysis and accurately compare your data to one another?
+
+
+When looking at the above plots, I scaled ny read counts to 4428 in my dataset. I landed on this number based on following the class dataset in my earlier processing steps. I got rid of outliers, and samples with low sequencing depth relative to the rest of my samples. Note that in the class dataset, they discarded any samples with sequencing depth less than ~1500, since my dataset is much more deeply sequenced, I upped this value to ~4500. It also looked like the rarefaction curves plateaued in all my samples when I did a visual analysis.
+
+I am honestly very unsure if this is a sufficient number to perform a beta-diversity analysis and accurately compare my data to one another, as I have a very large range in sequencing depth for my data: min = 4428, max = 170 404.The linear model suggests a statistically significant positive relationship between total sequencing depth and ASV richness, with a p-value of 0.00497 for the slope.But the R-squared value is pretty low (0.04), meaning that even though there is a statistically significant relationship between number of ASVs and sequence depth, but it is very weak and only explains about 4% of the variation. I think this means that sequencing depth is not the main factor that is driving differences in ASV richness.
+
+
+# 3. Scale Read Counts 
+
+```{r scale-reads, fig.width=6, fig.height=3}
+min(sample_sums(midpoint_rooted_physeq_cut))
+
+# Scale the reads 
+scaled_physeq <- 
+  midpoint_rooted_physeq_cut %>%
+  scale_reads(round = "matround")
+
+# Look at it 
+scaled_physeq
+
+# Look at it more!
+#View(data.frame(otu_table(midpoint_rooted_physeq_cut)))
+#View(data.frame(otu_table(scaled_physeq)))
+
+# Confirm seq read depth of scaled_physeq 
+scaled_TotalSeqs_df <- 
+  scaled_physeq %>%
+  sample_sums() %>%
+  data.frame()
+
+colnames(scaled_TotalSeqs_df)[1] <- "TotalSeqs"
+
+# add a new column of num_ASVs (RAW, non-noramlized # ASVs)
+scaled_TotalSeqsASVs_df <- 
+  scaled_TotalSeqs_df %>%
+  mutate(num_ASVs = colSums(otu_table(scaled_physeq) > 1))
+
+# Plot it! 
+scaledSeq_histogram <- 
+  scaled_TotalSeqs_df %>%
+  ggplot(aes(x = TotalSeqs)) + 
+  geom_histogram() + 
+  labs(title = "Scaled Seq Depth Histogram") + 
+  scale_x_continuous() + 
+  theme_bw()
+
+# Scaling always gives us a range! 
+# Minimum sequences
+min(scaled_TotalSeqs_df$TotalSeqs) 
+# Total Range 
+range(scaled_TotalSeqs_df)
+# How many is that range? 
+range_seqs <- (max(scaled_TotalSeqs_df$TotalSeqs) - min(scaled_TotalSeqs_df$TotalSeqs))
+range_seqs
+# And in terms of percent? 
+range_seqs/max(scaled_TotalSeqs_df$TotalSeqs)
+#View(scaled_TotalSeqs_df)
+
+
+# Set the axis min and max for the next plot 
+max_y <- max(scaled_TotalSeqs_df$TotalSeqs) + 10
+min_y <- min(scaled_TotalSeqs_df$TotalSeqs) - 10
+
+# Now, draw the plot 
+scaledSeq_vs_numASV_plot <- 
+  scaled_TotalSeqsASVs_df %>%
+  ggplot(aes(x = num_ASVs, y = TotalSeqs)) + 
+  geom_point() + 
+  scale_y_continuous(limits = c(min_y, max_y)) +
+  #geom_smooth(method = "lm") + 
+  theme_bw() + 
+  labs(title = "Scaled: Seq Depth vs # ASVs")
+
+# Put the two plots together.
+scaledSeq_histogram + scaledSeq_vs_numASV_plot +
+  plot_annotation(tag_levels = "A")
+```
+
+INTERPRETATION #3:  Evaluate the scaled read count plots above. Are the total number of sequences across all of your samples in the same general range? What is the minimum and maximum (i.e., the range) of the sequencing depth? How was the relationship with the number of ASVs modified after scaling the read counts?
+
+
+Yes, the total number of sequences across all of your samples are in the same general range (4291-4462 sequences) and have a total count of 171 sequences in this range. Something that is concerning, is that in my scaled sequence depth vs. # ASVs plot the max number of ASVs shown is just under 700, while on my original plot I discussed in interpretation #2 the max number of ASVs was ~2500. I plan to ask Mar/Sophia during office hours before I submit my assignment, but I will move forward with my scaled reads for now.
+
+# Beta Diversity: Dissimilarity Metrics in Microbial Ecology
+
+# 4. Calculating dissimilarity
+
+Now, let's make distance objects of the dissimiliarity measures we used in class! 
+
+```{r calc-dissimilarity}
+# Sorensen Dissimiliarty
+scaled_sorensen_dist <- phyloseq::distance(scaled_physeq, method = "bray", binary = TRUE)
+
+# What does it look like? 
+class(scaled_sorensen_dist)
+str(scaled_sorensen_dist)
+#head(as.matrix(scaled_sorensen_dist))
+
+# Bray-Curtis Dissimiliarty
+scaled_bray_dist <- phyloseq::distance(scaled_physeq, method = "bray", binary = FALSE)
+
+# Abundance-Unweighted UniFrac
+scaled_uUnifrac_dist <- phyloseq::distance(scaled_physeq, method = "unifrac")
+
+# Abundance-Weighted UniFrac
+scaled_wUnifrac_dist <- phyloseq::distance(scaled_physeq, method = "wunifrac")
+```
+
+INTERPRETATION #4:  Which dissimilarity metric is most related to your scientific question? Why or why not?
+
+My broad scientific question is very general: How is microbial biodiversity modified as milk is processed in the dairy supply chain?
+
+Because of this. it could be related to any of the dissimilarity metrics we've discussed. But with the way I've framed my null hypothesis and alternative hypothesis #1, I want to first focus on looking how my samples differ in presence/absence of species. So I would like to focus my analysis first on using Sorensen (Sorensen over Jaccard because I want to gove greater weight to shared species). In my initial anlysis I really just wnat to focus on who's there!! Then, I would like to incorporate abundance data and use Bray-Curtis when assessing alternative hypothesis #2!
+
+
+
+# 5a. PERMANOVA: Testing Means/Centroids
+
+Here, we will focus on comparing the Sorensen and the Bray-Curtis. 
+
+### Sorensen
+
+```{r PERMANOVA-categorical-sorensen}
+# Sorensen
+# Note I am not using multiple terms here, as I am only interested in looking at sample type. Later in my analysis I might look into early/late season samples, but that is an entirely separate research question!
+
+sorensen_sample_result <- adonis2(scaled_sorensen_dist ~ environment_material, 
+                         data = metadata_df_cut, 
+                         by = "terms")
+
+sorensen_sample_result
+#note I did not run "margin" instead of "terms" like the class data did, as I am only looking at one "term" (aka variable, which in my case is sample type)!
+
+```
+### Bray Curtis
+
+```{r PERMNOVA-categorical-braycurtis}
+
+braycurtis_sample_result <- adonis2(scaled_bray_dist ~ environment_material, 
+                         data = metadata_df_cut, 
+                         by = "terms")
+
+braycurtis_sample_result
+
+```
+
+INTERPRETATION #5: Using the above example to guide you, run the appropriate PERMANOVA for your scientific question and interpret the results. What biological conclusion can you draw from your PERMANOVA results?
+
+
+Both Sorensen and Bray-Curtis distance matrices showed significant results (p = 0.001). Using Sorensen, 12.6% of the variation in microbial community composition can be explained by sample type and using Bray Curtis, 15.1% of the variation in community composition can be explained by sample type, which corresponds to how far along the milk was in the dairy supply chain (going from bulk tank milk to skimmed milk powder). The F-statistic tells us how strongly a variable separates groups, relative to residuals. The F statistics were 5.36 for Sorensen and 6.64 for Bray-Curtis. 
+
+From these results, I understood that there is significant differences in the microbial communities depending on how far along the milk is in its processing pipeline, essentially there are differences in the microbial communities in the milk when it is at different stages in the processing pipeline. While these F-statistic results aren't as high as the ones we saw in the class analysis, I still think that these values show that there are meaningful clustering based on sample type.
+
+
+Since Bray-Curtis explained slightly more variation than Sorensen, I interpreted this to mean that not only are there different taxa present in the communities, as determined by using Sorensen, but that the relative abundances of these taxa also further contribute to the differences we are seeing in microbial compositions between the sample groups.
+
+
+# 5b. Betadisper: Testing Variances/Dispersions
+
+## Sorensen
+
+```{r betadisper-sorensen}
+# Homogeneity of Disperson test with beta dispr
+# Sorensen Betadisper - Sample Type 
+dispr_sorensen_sample_type <- betadisper(scaled_sorensen_dist, metadata_df_cut$environment_material)
+# permutest() performs a non-parametric permutation test, which is robust and valid for the kind of data used in beta diversity analysis (e.g., dissimilarity matrices).
+permutest(dispr_sorensen_sample_type)
+
+
+```
+
+## Bray Curtis
+
+
+```{r betadisper-bray}
+# Bray-Curtis Betadisper - Sample Type
+dispr_bray_sample_type <- betadisper(scaled_bray_dist, metadata_df_cut$environment_material)
+
+permutest(dispr_bray_sample_type)
+
+```
+
+
+INTERPRETATION #6: Using the above example to guide you, run the appropriate betadisper() and permutest() for your scientific question and interpret the results. What biological conclusion can you draw from your dispersion analysis?
+
+In my dispersion analysis, my Bray Curtis results are in complete agreement with the Sorensen results. Using both of these metrics, sample type has a significant betadisper()/permutest() result (p < 0.05). This means that group differences may be due to dispersion, not composition. This indicates that sample type likely has some biological difference in the variance, which means that we need to be careful in our PERMANOVA interpretations. 
+
+For example, sample types earlier in the processing pipeline, like bulk tank milk, could have higher dispersion due to having a wider range of microbial communities, while sample types later in the processing pipeline, like skimmed milk powder samples, could select for a few specific microbes and have lower dispersion. It is possible these significant betadisper()/permutest() results could just be reflecting biological reality.
+
+
+
+INTERPRETATION #7: Taking into account both the betadisper()/permutest() and the PERMANOVA (adonis2()) test that you ran, what biological conclusion can you draw regarding your data?
+
+
+Since my PERMANOVA is significant and my betadisper()/permutest() is significant, it suggests that my groups differ in community composition (as determined by PERMANOVA) but ALSO that they may differ in dispersion (as determined by betadisper()/permutest()). This difference in dispersion can influence the PERMANOVA result; it introduces the possibility that the PERMANOVA significance is partly driven by the differences in group variability and not just compositional shifts between the groups.
+
+Like we discussed in class, even with unequal dispersion, true ecological differences can still exist! Real biological processes like disturbance or environmental heterogeneity can cause both composition shifts and dispersion changes. I am now eager to use ordination plots to see whether centroids are distinct or just differently dispersed.
+
+
+# 6. Visualize Community Dissimilarity with Ordination
+
+# 6a. PCoA: Principal Coordinates Analysis
+
+```{r pcoa-plots, fig.height=3.5, fig.width=7}
+### SORENSEN 
+# First, calculate PCoA with Soresen
+scaled_soren_pcoa <- 
+  ordinate(physeq = scaled_physeq,
+         method = "PCoA",
+         distance = "bray", binary = TRUE)
+
+# Take a quick look
+str(scaled_soren_pcoa)
+
+# Plot it: Sorensen PCoA  
+sorensen_pcoa_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_soren_pcoa,
+                color = "environment_material",
+                title = "Sorensen PCoA") + 
+  scale_color_manual(values = environment_colors) + 
+  geom_point(size = 3, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+
+### Bray-Curtis 
+# Second, calculate PCoA with Bray-Curtis
+scaled_bray_pcoa <- 
+  ordinate(physeq = scaled_physeq,
+         method = "PCoA",
+         distance = "bray", binary = FALSE)
+
+# Plot it: Bray-Curtis PCoA 
+bray_pcoa_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_bray_pcoa,
+                color = "environment_material",
+                title = "Bray-Curtis PCoA") + 
+  scale_color_manual(values = environment_colors) + 
+  geom_point(size = 3, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+# Show the plots 
+sorensen_pcoa_plot + bray_pcoa_plot + 
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+```
+
+
+INTERPRETATION #8: Plot your data using a PCoA. Interpret what you can conclude from the PCoA.
+
+Here you can see that samply type (environment_material) is the dominant factor structuring the microbial communities. In the Bray-Curtis PCoA more variation is explained between the two axes (~23%) than Sorensen (~18%). Although this is a small difference (we gain ~5% variation explained), it could suggest that abundance differences matter when comparing the compositional differences in these samples.
+
+There were also a few key clustering features I wanted to mention, specifically in the Bray Curtis PCoA where the clustering between sample type is a lot tighter. Here, you can see clear clustering of the skimmed milk powder samples into two groups, with one of the groups being completely isolated. It is also interesting that with the clustering in this plot you can see a transition from bulk tank milk samples to collection tanker milk, to skimmed/whole milk silo samples to skimmed milk powder samples (albeit with major overlapping between the sample types). This was super cool to see, as this reflects the order of samples in the dairy processing pipeline. 
+
+Something that I do want to note about this, or that I have questions about, is that the majority of this gradual sort of separation does not occur across axis 1 representing sample type. Depending on when I am able to get into office hours, this is something I want to ask about!
+
+## 6b. NMDS: Non-Metric Multidimensional Scaling 
+
+```{r soren-nmds}
+## SORENSEN 
+scaled_soren_nmds <- 
+  ordinate(physeq = scaled_physeq,
+         method = "NMDS",
+         distance = "bray", binary = TRUE)
+
+# Plot it! 
+sorensen_nmds_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_soren_nmds,
+                color = "environment_material",
+                title = "Sorensen NMDS") + 
+  scale_color_manual(values = environment_colors) + 
+  geom_point(size = 3, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+### Bray-Curtis 
+# Second, calculate NMDS with Bray-Curtis
+scaled_bray_nmds <- 
+  ordinate(physeq = scaled_physeq,
+         method = "NMDS",
+         distance = "bray", binary = FALSE)
+
+# Plot it: Bray-Curtis NMDS 
+bray_nmds_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_bray_nmds,
+                color = "environment_material",
+                title = "Bray-Curtis NMDS") + 
+  scale_color_manual(values = environment_colors) + 
+  geom_point(size = 3, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+# Show the plots 
+sorensen_nmds_plot + bray_nmds_plot + 
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+```
+INTERPRETATION #9: Plot your data using NMDS. Interpret what you can conclude from the NMDS.
+
+Firstly, I want to mention that my stress values for both my Sorensen and Bray-Curtis NMDS plots were above 0.15 but below 0.2, although my Bray-Curtis stress values tended to be a bit lower in general. 
+
+The clustering in my Sorensen and Bray-Curtis NMDS plots were quite similar, although the clustering in the bulk tank samples was a bit tighter in my Bray-Curtis NMDS. For both NMDS plots samples generally clustered together but there was clear clustering by sample type. The centroid of the bulk tank milk and collection tanker milk looked like they almost overlapped in both plots, while there was a more distinct grouping of skimmed milk powder samples. It was also interesting to see that in the NMDS plot all of the skim milk samples grouped together, while in the PCoA plots the skimmed milk powder samples grouped into two distinct clusters. 
+
+In both Sorensen and Bray-Curtis NMDS plots, from left to right you can sort of visualize the transition from the most processed to least processed samples like we say in the Bray-Curtis PCoA, although there is much more overlapping between the cluster.
+
+
+## All ordinations together!
+
+```{r ordinations, fig.width=7, fig.height=6}
+sorensen_pcoa_plot + bray_pcoa_plot + 
+sorensen_nmds_plot + bray_nmds_plot + 
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+```
+
+INTERPRETATION #10: Plot both the PCoA and NMDS together. Which of the two visualizations work best for your data? Explain your reasoning.
+
+I think that PCoA worked best for my data. In PCoA, particularly Bray-Curtis PCoA, compared to NMDS, there was more distinct clustering. I think it did a better job of showing how distinct/different the microbial composition of the skimmed milk powder samples were. With Bray-Curtis PCoA the gradual overlapping between the different samples directly reflected the amount of processing these dairy samples had been subjected to which was super cool! 
+
+# Now what? 
+
+Based on the results above, which metric would you use to write up your paper: Sorensen or Bray-Curtis? 
+
+Although in my initial questions/hypotheses I wanted to focus strictly on presence absence, if I had to pick only one metric to focus on when writing my paper I would select Bray-Curtis as I feel like I am able to tell a much clearer story, and visually there is the best separation between sample groups.
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
