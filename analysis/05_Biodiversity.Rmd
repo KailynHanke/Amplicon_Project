@@ -228,7 +228,7 @@ head(sort(sample_sums(midpoint_rooted_physeq_cut)), 20) #min = 4428
 ```{r continue-load}
 
 # Save midpoint rooted phyloseq object
-save(midpoint_rooted_physeq, 
+save(midpoint_rooted_physeq_cut, 
      file = "data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
 
 # Intuition check on seq depth
@@ -242,6 +242,11 @@ metadata_df_cut <-
 
 # view of it
 glimpse(metadata_df_cut)
+
+
+#Save it in data file
+write.csv(metadata_df_cut, "data/05_Biodiversity/metadata_df_cut.csv", row.names = TRUE)
+
 ```
 
 
