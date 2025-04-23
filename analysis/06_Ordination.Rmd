@@ -271,7 +271,7 @@ scaled_physeq <-
 # Look at it 
 scaled_physeq
 
-# Save it
+# Save it in 06_Ordination 
 save(scaled_physeq, 
      file = "data/06_Ordination/scaled_physeq.RData")
 
