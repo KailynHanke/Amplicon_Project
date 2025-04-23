@@ -743,7 +743,11 @@ scaled_physeq</code></pre>
 ## sample_data() Sample Data:       [ 185 samples by 55 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 64953 taxa by 9 taxonomic ranks ]
 ## phy_tree()    Phylogenetic Tree: [ 64953 tips and 64952 internal nodes ]</code></pre>
-<pre class="r"><code># Look at it more!
+<pre class="r"><code># Save it
+save(scaled_physeq, 
+     file = &quot;data/06_Ordination/scaled_physeq.RData&quot;)
+
+# Look at it more!
 #View(data.frame(otu_table(midpoint_rooted_physeq_cut)))
 #View(data.frame(otu_table(scaled_physeq)))
 
@@ -1257,11 +1261,11 @@ separation between sample groups.</p>
 <pre class="r"><code># Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2025-04-22 01:00:21 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-04-23 16:07:27 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 4.823 mins</code></pre>
+<pre><code>## Time difference of 4.772 mins</code></pre>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session Information</h2>
@@ -1277,7 +1281,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2025-04-22
+##  date     2025-04-23
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────
