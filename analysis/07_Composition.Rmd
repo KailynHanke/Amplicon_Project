@@ -1,0 +1,26 @@
+---
+title: "Microbial Compositional Analysis of Dairy Samples Along a Processing Pipeline"
+author: "Kailyn Hanke"
+date: "2025-04-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
+                      fig.path = "../figures/07_Composition")
+```
+
+#Goals 
+
+1. Load in scaled/normalized phyloseq object. 
+2. Calculate the relative abundances of taxonomic groups at various levels: 
+    A. Phylum
+    B. Genus
+    C. ASV 
+3. Plot them, and narrow in on specific taxnomic group of interest
+
+
+## Inputs
+
+1. We will need the `scaled_physeq.RData`, which includes a rooted tree that we created in `analysis/06_Ordination/scaled_physeq.RData`. 
+
