@@ -38,7 +38,7 @@ Microbial abundance data—like 16S rRNA gene or metagenomics data—are typical
 
 INTERPRETATION #1: What are the limitations of interpreting microbial abundance from relative (aka. compositional) rather than absolute counts?
 
-Like we discussed a bit in class, especially after reading the Props et al., 2017 paper, there are clear limitations of interpreting microbial abundance data without including absolute counts. If you were to just look at the relative abundance data, it could be misleading and not accurately reflect reflect what is actually happening in the microbial community.Absolute abundance is truly quantitative and shows the actual number of cells in the sample, rather than just the proportion of taxa in the community identied relative to each other. Absolute abundance data is important because when used along with relative abundance it can reveal things about the microbial population dynamics you would not be able to interpret otherwise. For example, if you see a taxon's relative abundance rise it doesn't necessarily mean that there was an increase in that taxa, it could just be that other taxa declined and it affect the ratio (which is only revealed if you look at absolute abundance in addition to relative abundance). When you transform relative sequencing data into absolute counts, you are better able to understand how the microbial community was really changing over time.
+Like we discussed a bit in class, especially after reading the Props et al., 2017 paper, there are clear limitations of interpreting microbial abundance data without including absolute counts. If you were to just look at the relative abundance data, it could be misleading and not accurately reflect what is actually happening in the microbial community. Absolute abundance is truly quantitative and shows the actual number of cells in the sample, rather than just the proportion of taxa in the community identified relative to each other. Absolute abundance data is important because when used along with relative abundance it can reveal things about the microbial population dynamics you would not be able to interpret otherwise. For example, if you see a taxon's relative abundance rise it doesn't necessarily mean that there was an increase in that taxa, it could just be that other taxa declined and it affected the ratio (which is only revealed if you look at absolute abundance in addition to relative abundance). When you transform relative sequencing data into absolute counts, you are better able to understand how the microbial community was really changing over time.
 
 # Setup 
 
@@ -117,7 +117,6 @@ INTERPRETATION #2: Which phyla in your dataset have the highest relative abundan
 
 The phyla in my dataset that have the highest relative abundances (in order from most abundant to least abundant) is: Bacillota (0.3678), Pseudomonadota (0.3316), Bacteroidota (0.1566), Actinomycetota (0.0907), Deinococcota (0.0196), Verrucomicrobiota (0.0142), Acidobacteriota (0.004), Plantomycetota (0.0029), Spirochaetota (0.0029) and Thermodesulfobacteriota (0.0027).
 
-Note that in my initial creation of phylum_df above I did not filter out the phyla with less than 1% abundance! I want to look at what is plotted first just because I'm curious, and then will tone down the craziness for a more polished plot.
 
 ## Stacked Bar plots 
 
@@ -171,12 +170,12 @@ stacked_plot
 
 Woah Nelly!! This is a crazy plot, but was expected because I have so many samples. We really aren't able to get a good sense of what's going on, so I think in the next plot I am going to try and plot only the May samples and a separate plot with only the October samples.
 
-```{r stacked-bar-May-October}
+```{r stacked-bar-May-October, fig.width=9, fig.height=3.5}
 
 #Plot May stacked bar chart
 phylum_df %>%
   filter(Phylum %in% top10_phyla) %>%
-  #Here is where we filetr for May (month starts qith a 5)
+  #Here is where we filter for May (month starts qith a 5)
   filter(grepl("^5", Collection_Date)) %>%  
   ggplot(aes(x = Sample, y = Abundance, fill = Phylum)) +
   geom_bar(stat = "identity", color = "black") +
@@ -239,7 +238,7 @@ save(phylum_df,
 
 INTERPRETATION #3: Make the above dotplot and boxplot for your sample types and your most abundant phyla. What *initial* conclusions can you draw regarding the sampled microbial communities as it relates to your scientific question?
 
-This figure highlights some storng phylum-level differences between the different dairy sample types that were analyzed in this study.
+This figure highlights some strong phylum-level differences between the different dairy sample types that were analyzed in this study.
 
 Some specific results:
 
@@ -401,13 +400,13 @@ INTERPRETATION #4: Based on these phylum-level analyses, were there any phyla th
 
 Yes! Moving forward the phylum that I am most curious about is Deinococcota! This was the only phylum (in the top ten most abundant phyla we looked at) where the relative abundance in Skimmed Milk Powder samples were much higher than the other types of dairy samples that were tested (differences were significant). I want to take a deeper look at lower levels of taxonomy to epxlore what is really going on here. I'm quite excited about these differences in relative abundance, and I think it is one of the more interesting results I've seen!!
 
--Followed up with Bacteroidota
+Note that I also followed  up with Bacteroidota!
 
 ## B. Genus
 
 Let's first calculate the genus data frame. 
 
-```{r genus-actino-plots, fig.width=12, fig.height=4}
+```{r genus-df, fig.width=12, fig.height=4}
 # Calculate the Family relative abundance 
 # Note: The read depth MUST be normalized in some way: scale_reads
 genus_df <- 
@@ -502,7 +501,7 @@ genus_df %>%
 
 ```
 
-Okay a few quick notes here! I struggled so muhc to get this plot together, and I think it was because there were way to many genera to be displayed on one plot (it looked like a mess of random numbers when I plotted it). So, I then went and selected the 10 genera with the highest relative abundance. I also was curious to see how many Bacteroidota genera were there, and I found out there were 195! Wow!
+Okay a few quick notes here! I struggled so much to get this plot together, and I think it was because there were way to many genera to be displayed on one plot (it looked like a mess of random numbers when I plotted it). So, I then went and selected the 10 genera with the highest relative abundance. I also was curious to see how many Bacteroidota genera were there, and I found out there were 195! Wow!
 
 
 
@@ -510,18 +509,16 @@ INTERPRETATION #5: Please make some plots of mid-level taxonomic ranks (e.g. Gen
 
 Scientific Question: How is microbial biodiversity modified as milk is processed in the dairy supply chain?
 
-Wow! This mid-level taxonomic analysis was really cool, felt like I was teasing out important information about the makeup of the microbial communities present in these samples. I will definitely further this analysis before my presentation, but for now will focus my interpretation on my two genus-level plots (Deinococcota and Bacteroidota).
+Wow! This mid-level taxonomic analysis was really cool, felt like I was teasing out important information about the makeup of the microbial communities present in these samples. I will definitely further this analysis before my presentation, but for now will focus my interpretation on two genus-level plots (Deinococcota and Bacteroidota).
 
 *Deinococcota*:
-These results were so cool! Once we broke down the Deinococcota phylum into genera, we saw that three different genera, Deinococcus, Rhabdothermus, and Thermus, were represented in our samples. When we looked at Deinococcota at the phylum level, it was the only phylum we looked at where there was low relative abundance in all sample types *except* the Skimmed Milk Powder samples. Most trends we saw with the most abudnant phyla had higher relative abundance in the least processed samples and less abundance in the more processed Skim Milk Powder samples.
+Once I broke down the Deinococcota phylum into genera, I saw that three different genera, Deinococcus, Rhabdothermus, and Thermus, were represented in our samples. When I looked at Deinococcota at the phylum level, it was the only phylum where there was low relative abundance in all sample types *except* the Skimmed Milk Powder samples. The most consistent trend we saw across the top ten most abundant phyla was that they had a higher relative abundance in the least processed samples and less abundance in the more processed Skim Milk Powder samples.
 
-When we broke the Deinococcota phylum down into genera, we see that we do not see the trend we observed at the phylum level for Deinococcus or Rhabdothermus, BUT we do see this trend in the genus Thermus!! It seems as though Thermus is the only genus contributing to the trend we saw at the phylum level! I'm excited to do a bit of a literature review to see if I can identify a reason why Thermus might have much higher relative abundance in Skim Milk Powder vs Bulk Tank Milk!
-
-
+When we broke the Deinococcota phylum down into genera, we see that we do not see the trend we observed at the phylum level for the genera Deinococcus or Rhabdothermus, BUT we do see this trend in the genus Thermus!! It seems as though Thermus is the only genus contributing to the trend we saw at the phylum level! I'm excited to do a bit of a literature review to see if I can identify a reason why Thermus might have much higher relative abundance in Skim Milk Powder vs Bulk Tank Milk!
 
 *Bacteroidota*:
 
-Like I mentioned above in my document, I really struggled to make this plot of the relative abundance of the Bacteroidota genera! This was because there were SO MANY Bacteroidota genera represented in these samples - 195 genera to be exact!! That is a tad different than the three Deinococcota genera represented by our samples. In order to get around this, I thought the best strategy would be to look at the top ten most abundant genera in Bacteroidota.It was cool to see in these plots, that overall the trends in relative abundance for the genera were the same as the overall trend we saw for Bacteroidota across the different sample types at the phylum level. Bacteroides and Chryseobacterium has the highest relative of these top ten genera.
+Like I mentioned above in my document, I really struggled to make this plot of the relative abundance of the Bacteroidota genera! This was because there were SO MANY Bacteroidota genera represented in these samples - 195 genera to be exact!! That is a tad different than the three Deinococcota genera represented by our samples. In order to get around this, I thought the best strategy would be to look at the top ten most abundant genera in Bacteroidota. It was cool to see in these plots, that overall the trends in relative abundance for the genera were the same as the overall trend we saw for Bacteroidota across the different sample types at the phylum level. Bacteroides and Chryseobacterium has the highest relative of these top ten genera.
 
 
 # C. ASV level
@@ -555,7 +552,7 @@ ASV_df <-
 ASV_df 
 ```
 
-### C1. Deinococcota ASVs 
+### C. Deinococcota ASVs 
 
 ```{r deino-asvs, fig.width=6, fig.height=8}
 # Calculate top couple of ASVs 
@@ -589,7 +586,7 @@ deino_asv_sample_type <-
 deino_asv_sample_type
 ```
 
-### C1. Bacteroidota ASVs 
+### C. Bacteroidota ASVs 
 
 ```{r bacteroid-asvs, fig.width=6, fig.height=8}
 # Calculate top couple of ASVs 
@@ -737,20 +734,20 @@ pseudo_asv_sample_type
 ```
 
 
-INTERPRETATION #7: Please make some plots at the ASV level as it relates to your scientific question. Were there any ASVs that were especially related to trends that you saw? Did a specific phylogenetic group all show the same trends (e.g. like the Actinomycetota ASVs above)? Or did the ASVs have various, likely niche-specific responses (similar to the Cyanobacteriota above)?
+*INTERPRETATION #7*: Please make some plots at the ASV level as it relates to your scientific question. Were there any ASVs that were especially related to trends that you saw? Did a specific phylogenetic group all show the same trends (e.g. like the Actinomycetota ASVs above)? Or did the ASVs have various, likely niche-specific responses (similar to the Cyanobacteriota above)?
 
 After completing Interpretation #6, I realized it would probably be beneficial to plot the most abundant ASVs for Pseudomonadota and Bacillota, as these two phyla contained nine of the ten most abundant ASVs across all samples. In order to explore my scientific question, "How is microbial biodiversity modified as milk is processed in the dairy supply chain?". I plotted the most abundant ASVs in Pseudomonadota and Bacillota above. 
 
 It was neat to see that, across the board with the phyla I looked at, there were no trends in phyla that remained consistent across all genera, and there were no trends in genera that remained consistent across all ASVs. 
 
-Without looking at Pseudomonadota at the ASV level I probably never would have noticed ASV_0026, ASV_0017, and ASV_0023 which all had the same pattern as ASV_0005 from the Deinococcota phylum. This ASV had a much higher relative abundance in the Skimmed Milk Powder samples than the other, less processed sample types.
+Without looking at Pseudomonadota at the ASV level I probably never would have noticed ASV_0026, ASV_0017, and ASV_0023 which all had the same pattern as ASV_0005 from the Deinococcota phylum. These ASVs have a much higher relative abundance in the Skimmed Milk Powder samples than the other, less processed sample types.
 
 
-Similarly, without looking at Bacillota at the level of ASVs, I would not have seen that ASV_001 (Geobacillus) and ASV_0008 (Streptococcus) also followed this trend! With my scientific question one of my main goals was to pick out the bacteria that had higher/lower relative abundance depending on how processed the sample was, so I was really pleased I was able to identify these ASVs in the data.
+Similarly, without looking at Bacillota at the level of ASVs, I would not have seen that ASV_001 (Geobacillus) and ASV_0008 (Streptococcus) also followed this trend! With my scientific question, one of my main goals was to pick out the bacteria that had higher/lower relative abundance depending on how processed the sample was, so I was really pleased I was able to identify these ASVs in the data.
 
 
 
-INTERPRETATION #8: Now, do a quick literature or google search and look back in the paper that you may be replicating (if applicable). Does your ASV-level changes represent something that is currently known? Or is this a novel result? What did you learn about this ASV or a group of ASVs in your dataset?
+*INTERPRETATION #8*: Now, do a quick literature or google search and look back in the paper that you may be replicating (if applicable). Does your ASV-level changes represent something that is currently known? Or is this a novel result? What did you learn about this ASV or a group of ASVs in your dataset?
 
 
 Yes, in my paper the results I have observed so far at the level of phylum and genus align fairly well with the results the authors obtained. I also want to note that they used OTUs and not ASVs in my paper.
