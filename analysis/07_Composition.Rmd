@@ -749,3 +749,15 @@ Without looking at Pseudomonadota at the ASV level I probably never would have n
 Similarly, without looking at Bacillota at the level of ASVs, I would not have seen that ASV_001 (Geobacillus) and ASV_0008 (Streptococcus) also followed this trend! With my scientific question one of my main goals was to pick out the bacteria that had higher/lower relative abundance depending on how processed the sample was, so I was really pleased I was able to identify these ASVs in the data.
 
 
+
+INTERPRETATION #8: Now, do a quick literature or google search and look back in the paper that you may be replicating (if applicable). Does your ASV-level changes represent something that is currently known? Or is this a novel result? What did you learn about this ASV or a group of ASVs in your dataset?
+
+
+Yes, in my paper the results I have observed so far at the level of phylum and genus align fairly well with the results the authors obtained. I also want to note that they used OTUs and not ASVs in my paper.
+
+
+In the paper, they saw that "The skimmed milk powder generated during the mid-lactation period had a microbial composition that was very different from that of raw milk; specifically, two thermophilic genera, Thermus and Geobacillus, were enriched". It was so cool to see that the results I saw at the ASV level aligned with what was published in the paper. 
+
+Although for the homework I just did a very preliminary analysis at the ASV level, over the weekend I will do a more in-depth analysis of the literature, and will have time to make more plots to explore these results further! I also plan to redo a lot of these analyses after I have split up the samples into mid and late lactation periods.
+
+Finally, one thing I would like to reiterate is that there was only one cream silo sample, but throughout the paper they use this singular sample to make conclusions about the microbial communities in cream silos. I just have to say that I personally am very skeptical of this approach. 
