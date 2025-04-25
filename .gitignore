@@ -1,4 +1,4 @@
-*.fastq
+data/07_Composition/genus_df.RData
 *.gz
 .Rproj.user
 data/01_DADA2/raw_ASV_counts.tsv
