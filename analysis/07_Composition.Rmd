@@ -3,6 +3,8 @@ title: "Microbial Compositional Analysis of Dairy Samples Along a Processing Pip
 author: "Kailyn Hanke"
 date: "2025-04-23"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -24,3 +26,484 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
 
 1. We will need the `scaled_physeq.RData`, which includes a rooted tree that we created in `analysis/06_Ordination/scaled_physeq.RData`. 
 
+## Outputs 
+
+1. Beautiful visualizations of microbial taxa and how they vary across dairy sample types.
+2. Run some stats! 
+
+# Compositional Data 
+
+Microbial abundance data—like 16S rRNA gene or metagenomics data—are typically **compositional:** they represent relative abundances constrained to a constant total (*e.g.,* percent or proportions). This introduces spurious correlations and other issues if analyzed with traditional statistics. This is a very important limitation to microbial data! 
+
+
+INTERPRETATION #1: What are the limitations of interpreting microbial abundance from relative (aka. compositional) rather than absolute counts?
+
+Like we discussed a bit in class, especially after reading the Props et al., 2017 paper, there are clear limitations of interpreting microbial abundance data without including absolute counts. If you were to just look at the relative abundance data, it could be misleading and not accurately reflect reflect what is actually happening in the microbial community.Absolute abundance is truly quantitative and shows the actual number of cells in the sample, rather than just the proportion of taxa in the community identied relative to each other. Absolute abundance data is important because when used along with relative abundance it can reveal things about the microbial population dynamics you would not be able to interpret otherwise. For example, if you see a taxon's relative abundance rise it doesn't necessarily mean that there was an increase in that taxa, it could just be that other taxa declined and it affect the ratio (which is only revealed if you look at absolute abundance in addition to relative abundance). When you transform relative sequencing data into absolute counts, you are better able to understand how the microbial community was really changing over time.
+
+# Setup 
+
+## Load Packages 
+```{r load-packages}
+# Load in the packages 
+pacman::p_load(tidyverse, devtools, DT, phyloseq, patchwork, rstatix, 
+               install = FALSE)
+
+# load colors
+source("code/colors.R")
+```
+
+## 1. Load in Scaled Phyloseq object 
+
+The following phyloseq object contains microbial community composition data in a standardized format. In this case, we’ve already normalized the reads (scaled to 20090 per sample), which is essential for comparing relative abundances.
+
+
+```{r load-data}
+load("data/06_Ordination/scaled_physeq.RData")
+
+# Look at the data 
+scaled_physeq
+
+# Intuition check - scaled at 1,942
+min(sample_sums(scaled_physeq))
+range(sample_sums(scaled_physeq))
+```
+
+# Taxonomic Analysis! 
+
+In this analysis, we will drill down from phylum to ASV level analyses, which will enable increasingly detailed insights into microbial diversity. However, it is also important for us to remember that deeper levels also come with increased noise and data sparsity, especially for rare groups. 
+
+## A. Phylum 
+
+Taxonomic analysis often begins at broader levels (*e.g.,* Phylum) to visualize overarching trends before zooming in on finer-scale patterns. This step allows us to identify which microbial groups dominate across samples.
+
+Now, let's calculate the relative abundance of the phyla across all the samples. **NOTE:** To do this, it is imperative that we have scaled the data to a constant sequencing depth. 
+
+```{r calc-phylum-df}
+# Create a phylum level dataframe
+phylum_df <- 
+  scaled_physeq %>%
+  # Agglomerate all ASV counts within a phylum
+  tax_glom(taxrank = "Phylum") %>%
+  # Calculate the relative abundance! 
+  transform_sample_counts(function(x) {x/sum(x)}) %>%
+  # Create a dataframe from phyloseq object
+  psmelt() %>%
+  #Filter out Phyla < 1 % 
+  #dplyr::filter(Abundance > 0.01) %>%
+  #Fix the station order 
+  mutate(environment_material = fct_relevel(environment_material, c(
+    "Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo", "Skimmed Milk Powder")))
+
+## What are the phylum abundances? 
+phylum_df %>%
+  group_by(Phylum) %>%
+  summarize(mean_PercAbund = round(mean(Abundance), digits = 4)) %>%
+  arrange(-mean_PercAbund) %>%
+  datatable()
+
+# Make a list of phyla the top phyla 
+top10_phyla <- 
+  phylum_df %>%
+  group_by(Phylum) %>%
+  summarize(mean_PercAbund = mean(Abundance)) %>%
+  arrange(-mean_PercAbund) %>%
+  head(n = 10) %>%
+  pull(Phylum)
+
+top10_phyla
+```
+
+INTERPRETATION #2: Which phyla in your dataset have the highest relative abundances? What are their abundances? We will focus on these phyla for plotting below. 
+
+The phyla in my dataset that have the highest relative abundances (in order from most abundant to least abundant) is: Bacillota (0.3678), Pseudomonadota (0.3316), Bacteroidota (0.1566), Actinomycetota (0.0907), Deinococcota (0.0196), Verrucomicrobiota (0.0142), Acidobacteriota (0.004), Plantomycetota (0.0029), Spirochaetota (0.0029) and Thermodesulfobacteriota (0.0027).
+
+Note that in my initial creation of phylum_df above I did not filter out the phyla with less than 1% abundance! I want to look at what is plotted first just because I'm curious, and then will tone down the craziness for a more polished plot.
+
+## Stacked Bar plots 
+
+Visualization helps detect patterns in composition and abundance that statistical models may later test. Stacked bar plots are often used but can obscure individual sample variation and visualize too much data all at once. 
+
+Therefore, we will also explore faceted and jittered boxplots below the bar plots to see sample-level trends more clearly.
+
+```{r phylum-stacked-bar, fig.width=9, fig.height=3.5}
+
+#Add in phyla colours that are missing in phylum_colors
+# Check your color vector
+top10_phyla %in% names(phylum_colors)
+
+#Note that here I had to add in specific colours into phylum_colors for the phyla that weren't specified in order to get the phyla to show up on my bar plot
+
+# Create a plot
+#Used this plot to sort out my phylum colours, make sure all the data is actually ebing seen/represented 
+phylum_df %>%
+  filter(Phylum %in% top10_phyla) %>%
+  group_by(environment_material, Phylum) %>%
+  summarise(Abundance = sum(Abundance)) %>%
+  ggplot(aes(x = environment_material, y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity", position = "stack", color = "black") +
+  scale_fill_manual(values = phylum_colors) +
+  labs(
+    title = "Top 10 Phyla Abundances by Sample Type",
+    x = "Sample Type",
+    y = "Relative Abundance"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+#actual plot (by sample)
+stacked_plot <- phylum_df %>%
+  filter(Phylum %in% top10_phyla) %>%
+  ggplot(aes(x = Sample, y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_y_continuous(limits = c(0, 1)) +
+  facet_grid(. ~ environment_material, scales = "free_x", space = "free_x") +
+  labs(title = "Top 10 Phyla by Individual Sample",
+       y = "Relative Abundance", x = "Sample ID") +
+  scale_fill_manual(values = phylum_colors) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        strip.text = element_text(face = "bold"),
+        panel.spacing.x = unit(0.5, "lines"))
+
+stacked_plot
+
+```
+
+Woah Nelly!! This is a crazy plot, but was expected because I have so many samples. We really aren't able to get a good sense of what's going on, so I think in the next plot I am going to try and plot only the May samples and a separate plot with only the October samples.
+
+```{r stacked-bar-May-October}
+
+#Plot May stacked bar chart
+phylum_df %>%
+  filter(Phylum %in% top10_phyla) %>%
+  #Here is where we filetr for May (month starts qith a 5)
+  filter(grepl("^5", Collection_Date)) %>%  
+  ggplot(aes(x = Sample, y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_y_continuous(limits = c(0, 1)) +
+  facet_grid(. ~ environment_material, scales = "free_x", space = "free_x") +
+  labs(title = "Top 10 Phyla by Individual Sample – May",
+       y = "Relative Abundance", x = "Sample ID") +
+  scale_fill_manual(values = phylum_colors) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        strip.text = element_text(face = "bold"),
+        panel.spacing.x = unit(0.5, "lines"))
+
+
+#Plot October stacked bar chart
+phylum_df %>%
+  filter(Phylum %in% top10_phyla) %>%
+  #Here is where we filter for October (month starts with a 10)
+  filter(grepl("^10", Collection_Date)) %>%  
+  ggplot(aes(x = Sample, y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_y_continuous(limits = c(0, 1)) +
+  facet_grid(. ~ environment_material, scales = "free_x", space = "free_x") +
+  labs(title = "Top 10 Phyla by Individual Sample – October",
+       y = "Relative Abundance", x = "Sample ID") +
+  scale_fill_manual(values = phylum_colors) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        strip.text = element_text(face = "bold"),
+        panel.spacing.x = unit(0.5, "lines"))
+
+```
+Success!
+
+## Faceted Bar plot 
+
+To help compare the phylum abundance between sample types, we can facet by phylum to better see how the changes occur across the stations, which is masked in the stacked bar plot. It's a little better than the stacked bar plot, however, we can do even better! 
+
+```{r phylum-facet-bar, fig.width=5, fig.height=12}
+
+phylum_df %>%
+  dplyr::filter(Phylum %in% top10_phyla) %>%
+  ggplot(aes(x = environment_material, y = Abundance, fill = Phylum, color = Phylum)) + 
+  facet_wrap(Phylum~., scale = "free", nrow = 2) + 
+  # add the stacked bar 
+  geom_jitter() +
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+  # change the colors to be our selected colors 
+  scale_fill_manual(values = phylum_colors) + 
+  scale_color_manual(values = phylum_colors) + 
+  theme_bw() + 
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+#save df of phyla
+save(phylum_df, 
+     file = "data/07_Composition/phylum_df.RData")
+
+```
+
+INTERPRETATION #3: Make the above dotplot and boxplot for your sample types and your most abundant phyla. What *initial* conclusions can you draw regarding the sampled microbial communities as it relates to your scientific question?
+
+This figure highlights some storng phylum-level differences between the different dairy sample types that were analyzed in this study.
+
+Some specific results:
+
+- **Acidobacteriota**, **Planctomycetota**, **Thermodesulfidobacteriota**,  **Spirochaetota**, and **Verrucomicrobiota** exhibited a pronounced decrease in abundance from the least processed samples, Bulk Tank Milk samples, to the most processed samples, Skimmed Milk Powder samples.
+- **Bacillota**, **Actinomycetota**, and **Pseudomonadota** had very similar patterns in terms of relative abundance with some minor differences in relative abundance of Whole Milk Silo and Cream Silo. In **Bacillota** and **Actinomycetota**, the relative abundance in the Cream Silo sample was almost as high as the Skimmed Milk Powder samples (the sample with highest relative abundance of Bacillota). The relative abundance in the Whole Milk Silo samples was also the lowest among the samples types. In **Pseudomonadota** the relative abundance in the Cream Silo sample was lower than the relative abundance in the other sample types. The relative abundance in Whole Milk Silos, on the other hand, was the highest among the sample types tested. 
+Remember that there is only one Cream Silo sample, so I am not weighting the results of this sample type to heavily.
+- **Bacteroidota** exhibited a pronounced decrease in abundance from the least processed samples, Bulk Tank Milk samples, to the most processed samples, Skimmed Milk Powder samples, although there was a distinct dip in relative abundance of Whole Milk Silo and Cream Silos, that was unique to this phyla.
+- **Deinococcota** exhibited some of the most interesting results! This was the only phyla we looked at where there was much higher relative abundance in the Skimmed Milk Powder samples compared to the other sample types that were tested. I definitely want to look further into these results.
+
+The difference in relative abundance of these phyla between Whole Milk Silo samples and Skim Milk Silo samples got me thinking about what might cause these differences we are seeing. Could certain bacteria be associated with fat molecules in the milk? Similar to particle associated bacteria vs. free-living bacteria in water? This is something that wasn't discussed in the paper but I just had a curious thought about! This might be hard to look at though, especially if there are fewer phyla in Skimmed Milk Powder samples, which could sort of give misleading results in a direct comparison.
+
+Also I would be curious to look at the similarities between phyla that follow similar relative abundance patterns between sample types.
+
+
+After initial exploration, we focus on specific phyla that appear to vary across sample type. I would like to follow up with these phyla:
+
+- Deinococcota
+- Bacteroidota
+- Pseudomonadota
+- Bacillota
+
+### A1. Deinococcota
+
+```{r phylum-deinococcota, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# Deinococcota - y: abundance, x: sample, dot plot + boxplot
+deinococcota_phylum_sample_type <- 
+  phylum_df %>%
+  dplyr::filter(Phylum == "Deinococcota") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Deinococcota Phylum") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+deinococcota_phylum_sample_type
+
+# Statistically: Kruskall-Wallis followed by a Tukey's Posthoc test
+# These are non-parametric (non-normal) stat tests
+
+
+# Filter for just Deinococcota
+deinococcota_df <- 
+  phylum_df %>%
+  filter(Phylum == "Deinococcota")
+
+# Kruskal-Wallis test
+kruskal_deino <- deinococcota_df %>%
+  kruskal_test(Abundance ~ environment_material)
+
+# View result
+kruskal_deino
+
+# If significant (p < 0.05), run post-hoc Dunn's test
+dunn_deino <- deinococcota_df %>%
+  dunn_test(Abundance ~ environment_material, p.adjust.method = "fdr") %>%
+  add_xy_position(x = "environment_material")
+
+# View post-hoc results
+dunn_deino
+
+
+```
+
+
+### A2. Bacteroidota
+
+```{r phylum-Bacteroidota, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# Bacteroidota - y: abundance, x: sample, dot plot + boxplot
+bacteroidota_phylum_sample_type <- 
+  phylum_df %>%
+  dplyr::filter(Phylum == "Bacteroidota") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Bacteroidota Phylum") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+bacteroidota_phylum_sample_type
+
+# Statistically: Kruskall-Wallis followed by a Tukey's Posthoc test
+# These are non-parametric (non-normal) stat tests
+
+```
+
+### A3. Pseudomonadota
+
+```{r phylum-Pseudomonadota, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# Pseudomonadota - y: abundance, x: sample, dot plot + boxplot
+pseudomonadota_phylum_sample_type <- 
+  phylum_df %>%
+  dplyr::filter(Phylum == "Pseudomonadota") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Pseudomonadota Phylum") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+pseudomonadota_phylum_sample_type
+
+# Statistically: Kruskall-Wallis followed by a Tukey's Posthoc test
+# These are non-parametric (non-normal) stat tests
+
+```
+
+
+### A4. Bacillota
+
+```{r phylum-bacillota, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# Bacillota - y: abundance, x: sample, dot plot + boxplot
+bacillota_phylum_sample_type <- 
+  phylum_df %>%
+  dplyr::filter(Phylum == "Bacillota") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Bacillota Phylum") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+bacillota_phylum_sample_type
+
+# Statistically: Kruskall-Wallis followed by a Tukey's Posthoc test
+# These are non-parametric (non-normal) stat tests
+
+```
+
+INTERPRETATION #4: Based on these phylum-level analyses, were there any phyla that you were able to identify to focus on moving forward for deeper taxonomic analyses? Why?
+
+Yes! Moving forward the phylum that I am most curious about is Deinococcota! This was the only phylum (in the top ten most abundant phyla we looked at) where the relative abundance in Skimmed Milk Powder samples were much higher than the other types of dairy samples that were tested (differences were significant). I want to take a deeper look at lower levels of taxonomy to epxlore what is really going on here. I'm quite excited about these differences in relative abundance, and I think it is one of the more interesting results I've seen!!
+
+-Followed up with Bacteroidota
+
+## B. Genus
+
+Let's first calculate the genus data frame. 
+
+```{r genus-actino-plots, fig.width=12, fig.height=4}
+# Calculate the Family relative abundance 
+# Note: The read depth MUST be normalized in some way: scale_reads
+genus_df <- 
+  scaled_physeq %>%
+  # agglomerate at the phylum level 
+  tax_glom(taxrank = "Genus") %>% 
+  # Transform counts to relative abundance 
+  transform_sample_counts(function (x) {x/sum(x)}) %>%
+  # Melt to a long format 
+  psmelt() %>%
+  mutate(environment_material = fct_relevel(environment_material, c(
+    "Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo", "Skimmed Milk Powder")))
+
+# Save df of genera
+save(genus_df, 
+     file = "data/07_Composition/genus_df.RData")
+
+ 
+```
+### B1. Deinococcota Genera 
+
+```{r deino-genus, fig.width=6, fig.height=6}
+# Deinococcota
+# Plot genus 
+deino_genus_sample_type <- 
+  genus_df %>%
+  dplyr::filter(Phylum == "Deinococcota") %>%
+  # At first, plot all of the genera and then subset the ones that have intersting trends
+  #dplyr::filter(Genus %in% c("hgcI clade", "CL500-29 marine group")) %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  facet_wrap(.~Genus, scales = "free_y", nrow = 1) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Deinococcota Genera") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = "none")
+
+#View it!
+deino_genus_sample_type
+
+```
+
+Wow wow wow!! I'm so glad I plotted at the level of genus - you can see that the relative abundance of Deinococcota in the Skimmed Milk Powder samples is essentially entirely represented by the genus Thermus - so cool!
+
+Since these results are so cool I'm also going to follow up with looking at Bacteroidota at the genus level.
+
+
+```{r}
+
+
+mystery_genus_sample_type <- 
+  genus_df %>%
+  dplyr::filter(Phylum == "Bacillota") %>%
+  # At first, plot all of the genera and then subset the ones that have intersting trends
+  #dplyr::filter(Genus %in% c("hgcI clade", "CL500-29 marine group")) %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  facet_wrap(.~Genus, scales = "free_y", nrow = 1) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Bacillota Genera") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = "none")
+
+#View it!
+mystery_genus_sample_type
+
+top_genera <- genus_df %>%
+  filter(Phylum == "Bacteroidota") %>%
+  group_by(Genus) %>%
+  summarize(mean_abund = mean(Abundance, na.rm = TRUE)) %>%
+  arrange(desc(mean_abund)) %>%
+  slice_head(n = 6) %>%
+  pull(Genus)
+
+# Plot only those
+genus_df %>%
+  filter(Phylum == "Bacteroidota", Genus %in% top_genera) %>%
+  ggplot(aes(x = environment_material, y = Abundance, fill = environment_material)) +
+  facet_wrap(~ Genus, scales = "free_y", nrow = 2) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) +
+  geom_jitter() +
+  theme_bw()
+
+
+```
+
+
+
+INTERPRETATION #5: Please make some plots of mid-level taxonomic ranks (e.g. Genus, Family, Order) as it relates to your scientific question. Were there any changes in the mid-level taxonomic trends compared to the phylum-level results? What does that tell you about that taxonomic group?
