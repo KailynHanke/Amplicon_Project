@@ -254,7 +254,11 @@ metadata_df_cut20000 <-
   sample_data() %>%
   data.frame()
 
+save(midpoint_rooted_physeq_cut20000, 
+     file = "data/06_Ordination/midpoint_rooted_physeq_cut20000.RData")
 
+save(metadata_df_cut20000, 
+     file = "data/06_Ordination/metadata_df_cut20000.RData")
 ```
 
 

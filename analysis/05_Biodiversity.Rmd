@@ -18,7 +18,7 @@ Run an analysis on the within-sample biodiversity of the samples in our project.
 
 1. Calculate the Hill Numbers of the samples using the iNEXT package. 
 2. Plot and evaluate the interpolated and extrapolated rarefaction curves from iNEXT. 
-3. Analyze the Hill numbers as it relates to stations and salinity (in PSU).
+3. Analyze the Hill numbers as it relates to sample type.
 4. Test and then answer the scientific question at hand! (Remember, we're doing biology!)
 
 ## Inputs 
@@ -229,7 +229,7 @@ head(sort(sample_sums(midpoint_rooted_physeq_cut)), 20) #min = 4428
 
 # Save midpoint rooted phyloseq object
 save(midpoint_rooted_physeq_cut, 
-     file = "data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
+     file = "data/05_Biodiversity/midpoint_rooted_physeq_cut.RData")
 
 # Intuition check on seq depth
 min(sample_sums(midpoint_rooted_physeq_cut))
@@ -409,6 +409,9 @@ What hypothses does the Shapiro-Wilk Test?
 obs_div_df_cut <- 
   iNEXT_manual_df_cut %>%
   dplyr::filter(Method == "Observed") 
+
+save(obs_div_df_cut, 
+     file = "data/05_Biodiversity/obs_div_df_cut.RData")
 
 # check it
 glimpse(obs_div_df_cut)
