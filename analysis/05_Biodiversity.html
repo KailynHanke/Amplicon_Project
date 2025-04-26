@@ -367,8 +367,7 @@ our project.</p>
 package.</li>
 <li>Plot and evaluate the interpolated and extrapolated rarefaction
 curves from iNEXT.</li>
-<li>Analyze the Hill numbers as it relates to stations and salinity (in
-PSU).</li>
+<li>Analyze the Hill numbers as it relates to sample type.</li>
 <li>Test and then answer the scientific question at hand! (Remember,
 we’re doing biology!)</li>
 </ol>
@@ -603,8 +602,8 @@ head(sort(sample_sums(midpoint_rooted_physeq_cut)), 20) #min = 4428</code></pre>
 # midpoint_rooted_tree_plot_fixed</code></pre>
 <p>##Let’s continue with midpoint_rooted_physeq_cut</p>
 <pre class="r"><code># Save midpoint rooted phyloseq object
-save(midpoint_rooted_physeq, 
-     file = &quot;data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData&quot;)
+save(midpoint_rooted_physeq_cut, 
+     file = &quot;data/05_Biodiversity/midpoint_rooted_physeq_cut.RData&quot;)
 
 # Intuition check on seq depth
 min(sample_sums(midpoint_rooted_physeq_cut))</code></pre>
@@ -674,6 +673,8 @@ glimpse(metadata_df_cut)</code></pre>
 ## $ merged                                   &lt;dbl&gt; 99063, 85110, 249718, 137732,…
 ## $ nochim                                   &lt;dbl&gt; 60993, 47011, 170431, 109452,…
 ## $ num_ASVs                                 &lt;dbl&gt; 794, 961, 841, 459, 626, 415,…</code></pre>
+<pre class="r"><code>#Save it in data file
+write.csv(metadata_df_cut, &quot;data/05_Biodiversity/metadata_df_cut.csv&quot;, row.names = TRUE)</code></pre>
 </div>
 </div>
 <div id="biodiversity-hill-numbers-with-inext" class="section level1">
@@ -1087,6 +1088,9 @@ indicate that the data is <strong>not normal</strong>.</li>
 obs_div_df_cut &lt;- 
   iNEXT_manual_df_cut %&gt;%
   dplyr::filter(Method == &quot;Observed&quot;) 
+
+save(obs_div_df_cut, 
+     file = &quot;data/05_Biodiversity/obs_div_df_cut.RData&quot;)
 
 # check it
 glimpse(obs_div_df_cut)</code></pre>
@@ -1520,11 +1524,11 @@ false positive discoveries among all rejected null hypotheses.</p>
 # Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2025-04-21 11:45:04 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-04-26 17:33:40 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 21.499 secs</code></pre>
+<pre><code>## Time difference of 20.574 secs</code></pre>
 </div>
 </div>
 <div id="session-information" class="section level2">
@@ -1541,7 +1545,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2025-04-21
+##  date     2025-04-26
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────
