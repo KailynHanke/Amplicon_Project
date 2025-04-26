@@ -9,7 +9,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
-                      fig.path = "../figures/07_Composition")
+                      fig.path = "../figures/07_Composition/")
 ```
 
 #Goals 
