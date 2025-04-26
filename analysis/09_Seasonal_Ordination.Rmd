@@ -1,0 +1,105 @@
+---
+title: "Between-Sample (Beta) Diversity of microbes in dairy samples across seasons"
+author: "Kailyn Hanke"
+date: "2025-04-26"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.path = "../figures/09_Seasonal_Ordination/")
+```
+
+#Goals
+
+The goal of this document is to run an analysis on the between-sample (beta( diversity of the samples in my project, similar to the analysis that I ran in 06_Ordination. This is the second of three new analysis documents I will make (I have previously made 08_Seasonal_Biodiversity and will subsequently make 10_Seasonality_Composition). See more info on my organizational layout under "Goals" in 08_Seasonal_Biodiversity.
+
+Unlike in my original 06_Ordination analysis, I do not need to evaluate sequencing depth and normalize read counts, as I have previously done this in my original homework document!
+
+1. Calculate community **dis**similarities. Numbers between 0 and 1. If 0, completely similar versus if they are 1, then they're completely dissimilar. Here I will split up my communities by sample type *AND* season!!
+    a. **Sorensen**: Shared Species as a binary value: Abundance-unweighted 
+    b. **Bray-Curtis**: Shared Abundant species: Abundance-weighted
+    c. **(Abundance-)Weighted UNIFRAC**: Consider Abundant Species and where they fall on the tree  
+5. Run statistics with functions from the vegan R package: 
+    a. PERMANOVA with `adonis2()`.
+    b. betadispR with `betadisper()` and `permutest()`. 
+6. Visualize the community data with two unconstrained Ordinations:  
+    a. **PCoA**: Linear Method. Eigenvalue = how much variation is explained by each axis. Choose to view axis 1, 2, 3, etc. and plot them together.  
+    b. **NMDS**: Non-linear. Smush multiple Dimensions into 2 or 3 axes. Need to report Stress value (ideally <0.15).
+    
+
+## Inputs
+    
+1. We will need the `scaled_physeq.RData`, that we created in `analysis/06_Ordination.Rmd`. 
+
+## Outputs
+
+While defining community based on sample type and season:
+1. Calculated beta-diversity dissimilarity measures (*e.g.* Sorensen, Bray-Curtis, abundance-unweighted and -weighted UniFrac) across every sample. 
+2. Ordination figures (*i.e.,* PCoA/NMDS) to include in the scientific paper that visualize the data as it relates to the scientific question.
+3. Statistical tests (*i.e.,* PERMANOVA & betadisper) conveying the measured and quantified changes and patterns in biodiversity.
+
+# Set up 
+
+## Timing of this script
+
+```{r rmd-start}
+# What time did we start running this script? 
+start_time <- Sys.time()
+```
+
+## Set the seed
+
+```{r set-seed}
+set.seed(111111)
+```
+
+## Load Packages, colors & functions  
+```{r load-packages}
+pacman::p_load(tidyverse, devtools, phyloseq, patchwork, vegan, 
+               install = FALSE)
+
+# Load Colors 
+source("code/colors.R")
+
+# Load functions 
+source("code/functions.R")
+
+
+```
+
+
+# 1. Load in the data 
+
+```{r load-data}
+
+load("data/06_Ordination/scaled_physeq.RData")
+
+```
+
+# Beta Diversity: Dissimilarity Metrics in Microbial Ecology
+
+# 4. Calculating dissimilarity
+
+Now, let's make distance objects of the dissimiliarity measures we used in class!
+
+```{r calc-dissimilarity}
+
+# Sorensen Dissimiliarty
+scaled_sorensen_dist <- phyloseq::distance(scaled_physeq, method = "bray", binary = TRUE)
+
+# Bray-Curtis Dissimiliarty
+scaled_bray_dist <- phyloseq::distance(scaled_physeq, method = "bray", binary = FALSE)
+
+# Abundance-Unweighted UniFrac
+scaled_uUnifrac_dist <- phyloseq::distance(scaled_physeq, method = "unifrac")
+
+# Abundance-Weighted UniFrac
+scaled_wUnifrac_dist <- phyloseq::distance(scaled_physeq, method = "wunifrac")
+
+```
+
+
+
