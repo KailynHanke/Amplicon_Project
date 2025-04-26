@@ -196,7 +196,6 @@ wilcox_season_richness <- richness_no_cream %>%
 
 
 # Look at it 
-View(wilcox_season_richness)
 wilcox_season_richness
 
 
@@ -245,7 +244,6 @@ wilcox_season_shannon <- shannon_no_cream %>%
 
 
 # Look at it 
-View(wilcox_season_shannon)
 wilcox_season_shannon
 
 ```
@@ -290,7 +288,6 @@ wilcox_season_simpson <- simpson_no_cream %>%
 
 
 # Look at it 
-View(wilcox_season_simpson)
 wilcox_season_simpson
 
 ```
