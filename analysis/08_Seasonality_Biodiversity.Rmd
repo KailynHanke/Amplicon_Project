@@ -1,0 +1,342 @@
+---
+title: "Exploring seasonality-based differences in biodiversity in dairy samples across a processing pipeline"
+author: "Kailyn Hanke"
+date: "2025-04-26"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
+                      fig.path = "../figures/08_Seasonality_Biodiversity/")
+```
+
+#Goals
+
+The goal of this document is to run an analysis on the within-sample biodiversity of the samples in my project, similar to the analysis that I ran in 05_Biodiversity. This is the first of three new analysis documents I will make (I will subsequently make 09_Seasonality_Ordination and 10_Seasonality_Composition). 
+
+When I initially completed my homework assignments, I ran my biodiversity, ordination and composition analysis without splitting my data up between mid-lactation and late-lactation samples (sample seasonality). This was a great starting point, but for my presentation and to wrap up this project, I really wanted to run additional analysis where I also classified the seasonality of my samples to mimic the analysis done in the paper where this data is originally from.
+
+I thought that making separate analysis documents was probably the best way to maintain organization within my project, while providing me with a little piece of mind I would not mess up the analysis I did in my original homework documents. It's super cool that I have the skills to do this - hopefully my organization and reproducibility continue to improve while I work on these documents!
+
+In this document I do not need to calculate Hill Numbers or evaluate the rarefaction curves, as I have previously done this in my original homework document!
+
+1. Analyze the Hill numbers as it relates to sample type across processing pipeline and seasonality.
+2. Test and answer additional scientific questions focused on seasonality and sample type!
+
+#Inputs
+
+1. We will need the `midpoint_rooted_physeq_cut`, the midpoint rooted tree that we initially created in `analysis/04B_Phylogenetic_Tree_Inspection.Rmd`, but was edited in my original homework document `analysis/05_Biodiversity.Rmd`.  We will also need to load in some other objects from that original document since we are skipping straight to our diversity analyses (see the load data chunk).
+
+## Outputs
+
+1. Figures to include in our scientific paper that visualize the data as it relates to the scientific question.
+2. Statistical tests conveying the measured and quantified changes and patterns in biodiversity.
+
+#INPUT SCIENTIFIC QUESTION STUFF - LOOK AT OG DOC
+
+
+# Set up the environment
+
+## Timing of this script
+
+
+
+```{r rmd-start}
+# What time did we start running this script? 
+start_time <- Sys.time()
+```
+
+## Set the seed 
+```{r set-seed}
+set.seed(111111)
+```
+
+## Load Packages & Colors 
+
+```{r load-packages-colors}
+#install packages for stats
+#install.packages("rstatix")
+#install.packages("ggpubr")
+#install.packages("FSA")
+#install.packages("rstatix")
+#install.packages("lubridate")
+
+
+pacman::p_load(tidyverse, devtools, patchwork, iNEXT, phyloseq, lubridate,
+               # packages for stats
+               ggpubr, rstatix, FSA, install = FALSE)
+
+```
+
+## Load in Data 
+
+```{r load-data}
+
+load("data/05_Biodiversity/midpoint_rooted_physeq_cut.RData")
+
+load("data/05_Biodiversity/obs_div_df_cut.RData")
+
+source("code/colors.R")
+
+```
+
+
+#Diversity by Sample Type 
+
+## Determing mid-lactation and late-lactation
+
+```{r seasonality-df}
+
+
+#Extract the month to determine mid-lactation and late-lactation samples
+
+
+#changing the formatting of Collection_Date
+obs_div_df_cut <- obs_div_df_cut %>%
+  mutate(Collection_Date = mdy(Collection_Date))
+
+#Extracting the month name
+obs_div_df_cut <- obs_div_df_cut %>%
+  mutate(month_name = month(Collection_Date, label = TRUE))
+
+#Count how many samples were collected each month
+obs_div_df_cut %>%
+  count(month_name)
+
+# Add numeric month and season column so that obs_div_df_cut will have month_name (May), month (5) and seasonality (mid_lactation)
+
+obs_div_df_cut <- obs_div_df_cut %>%
+  mutate(
+    month = month(Collection_Date), # numeric month (1–12)
+    season = case_when(
+      month %in% c(5) ~ "mid_lactation",
+      month %in% c(1, 10, 12) ~ "late_lactation",
+      TRUE ~ NA_character_
+    )
+  )
+
+
+#Intuition check
+
+#check season counts
+obs_div_df_cut %>%
+  count(season)
+
+
+```
+
+Okay nice, I successfully incorporated seasonality into my df! As an intuition check I investigated to see if my month count and season count added up to the same value - and they did! Love to see it!
+
+Note, mid-lactation samples were collected in May, while late-lactation samples were collected primarily in October, although due to farm scheduling, other samples were collected in December and January as well. The same 67 farms were re-sampled in the late-lactation period that were collected in the mid-lactation period.
+
+
+Now we are going to look at diversity by sample type and collection season.
+
+
+### Diversity by Sample Type 
+
+```{r make-obs-df}
+
+# First, make a new variable combining environment_material and season
+obs_div_df_cut <- obs_div_df_cut %>%
+  mutate(env_season = paste(environment_material, season, sep = "_"))
+
+# Now plot!
+obs_div_df_cut %>%
+  ggplot(aes(x = env_season, y = qD, fill = environment_material, color = environment_material)) + 
+  facet_wrap(.~Order.q, scales = "free_y") + 
+  geom_jitter() + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+  labs(y = "Effective Number of ASVs") + 
+  theme_bw() + 
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+```
+
+#Statistically Test Richness
+
+```{r sample-diversity-richness, fig.height=4, fig.width=4}
+
+#Use this chunk to run stats on richness between mid- and late-lactation FOR EACH SAMPLE TYPE
+
+#This mimics the setup of Fig 2A in my paper
+
+#Right now, would need to use not normal test 
+
+# Pull out richness data 
+obs_rich_df_cut <- 
+  obs_div_df_cut %>%
+  dplyr::filter(Order.q == 0)
+
+
+#Reorder sample type levels
+obs_rich_df_cut$environment_material <- factor(
+  obs_rich_df_cut$environment_material,
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo",
+             "Skimmed Milk Powder")
+)
+
+
+# Remove 'Cream Silo' samples just for Wilcoxon testing
+richness_no_cream <- obs_rich_df_cut %>%
+  filter(environment_material != "Cream Silo")
+
+
+#Perform Wilcoxon Rank-Sum test: richness between seasons, separately for each sample type
+wilcox_season_richness <- richness_no_cream %>%
+  group_by(environment_material) %>%
+  wilcox_test(qD ~ season)
+
+
+# Look at it 
+View(wilcox_season_richness)
+wilcox_season_richness
+
+
+```
+
+Note that to do my Wilcoxon test for non-normal data, I had to remove my cream silo sample because there was only one sample taken during the late-lactation phase.
+
+Also note that when I was statistically testing for richness in my original 05_Biodiversity document, I used a Kruskal Wallis test since I was comparing richness differences between all the different sample types at once. Here I used Wilcoxon test, since only comparing the difference in richness within the mid/late lactation groups. 
+
+From the results of the Wilcoxon test, the only sample type with a significant difference in richness between mid- and late-lactation samples was Skimmed Milk Powder samples (had p-value < 0.05).
+
+
+#Statistically Test Shannon Diversity
+
+```{r sample-diversity-shannon, fig.height=4, fig.width=4}
+
+#Use this chunk to run stats on shannon diversity between mid- and late-lactation FOR EACH SAMPLE TYPE
+
+#This mimics the setup of Fig 2A in my paper
+
+#Right now, would need to use not normal test 
+
+# Pull out shannon diversity data 
+obs_shannon_df_cut <- 
+  obs_div_df_cut %>%
+  dplyr::filter(Order.q == 1)
+
+
+#Reorder sample type levels
+obs_shannon_df_cut$environment_material <- factor(
+  obs_shannon_df_cut$environment_material,
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo",
+             "Skimmed Milk Powder")
+)
+
+
+# Remove 'Cream Silo' samples just for Wilcoxon testing
+shannon_no_cream <- obs_shannon_df_cut %>%
+  filter(environment_material != "Cream Silo")
+
+
+#Perform Wilcoxon Rank-Sum test: shannon diversity between seasons, separately for each sample type
+wilcox_season_shannon <- shannon_no_cream %>%
+  group_by(environment_material) %>%
+  wilcox_test(qD ~ season)
+
+
+# Look at it 
+View(wilcox_season_shannon)
+wilcox_season_shannon
+
+```
+
+
+From the results of the Wilcoxon test, Skimmed Milk Powder samples and Bulk Tank Milk samples had a significant difference in shannon diversity between mid and late-lactation samples  (had p-value < 0.05).
+
+
+#Statistically Test Simpson Diversity
+
+```{r sample-diversity-simpson, fig.height=4, fig.width=4}
+
+#Use this chunk to run stats on simpson diversity between mid- and late-lactation FOR EACH SAMPLE TYPE
+
+#This mimics the setup of Fig 2A in my paper
+
+#Right now, would need to use not normal test 
+
+# Pull out simpson diversity data 
+obs_simpson_df_cut <- 
+  obs_div_df_cut %>%
+  dplyr::filter(Order.q == 2)
+
+
+#Reorder sample type levels
+obs_simpson_df_cut$environment_material <- factor(
+  obs_shannon_df_cut$environment_material,
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo",
+             "Skimmed Milk Powder")
+)
+
+
+# Remove 'Cream Silo' samples just for Wilcoxon testing
+simpson_no_cream <- obs_simpson_df_cut %>%
+  filter(environment_material != "Cream Silo")
+
+
+#Perform Wilcoxon Rank-Sum test: simpson diversity between seasons, separately for each sample type
+wilcox_season_simpson <- simpson_no_cream %>%
+  group_by(environment_material) %>%
+  wilcox_test(qD ~ season)
+
+
+# Look at it 
+View(wilcox_season_simpson)
+wilcox_season_simpson
+
+```
+Like the Shannon diversity test, the results of the Wilcoxon test, Skimmed Milk Powder samples and Bulk Tank Milk samples had a significant difference in Simpson diversity between mid and late-lactation samples  (had p-value < 0.05).
+
+
+Below I will make a plot with my Wilcoxon richness test results added for richness, shannon and simpson diversity.
+
+```{r alpha-div-stat-plot}
+
+
+# Add significance stars to your plot
+
+obs_div_df_cut %>%
+  ggplot(aes(x = env_season, y = qD, fill = environment_material, color = environment_material)) + 
+  facet_wrap(.~Order.q, scales = "free_y") + 
+  geom_jitter() + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+  labs(y = "Effective Number of ASVs") + 
+  theme_bw() + 
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+#add stars to plot cannot figure out
+
+```
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
