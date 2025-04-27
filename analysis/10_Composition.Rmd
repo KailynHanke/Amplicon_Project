@@ -288,4 +288,502 @@ stacked_plot_late_onlyll +
 
 ```
 
+top10_phyla_mid
+
+ [1] "Bacillota"               "Pseudomonadota"          "Bacteroidota"           
+ [4] "Actinomycetota"          "Deinococcota"            "Verrucomicrobiota"      
+ [7] "Spirochaetota"           "Thermodesulfobacteriota" "Acidobacteriota"        
+[10] "Planctomycetota"         "Myxococcota"
+
+Plus "Myxococcota" (late) and Deinococcota is (mid)
+
 ## Faceted Bar plot
+
+Now I would like to make a faceted bar plot with the top 10 phyla of both mid-lactation and late-lactation samples. In the top ten phyla for each season, 9 are the same. In the mid-lactation samples Deinococcota makes the top ten, while in the late-lactation samples, Myxococcota makes the cut. 
+
+So in this graph I will plot the 9 shared top 10 phyla, and then both Deinococcota and Myxococcota (total of 11 phyla). I will also have a bar for each season within each phyla plot.
+
+```{r phylum-facet-bar, fig.width=5, fig.height=12}
+
+
+phylum_df_season %>%
+  filter(Phylum %in% c(
+    "Bacillota", "Pseudomonadota", "Bacteroidota", "Actinomycetota", "Verrucomicrobiota", "Spirochaetota", "Thermodesulfobacteriota",
+    "Acidobacteriota", "Planctomycetota", "Deinococcota", "Myxococcota"
+  )) %>%
+  ggplot(aes(x = season, y = Abundance, fill = Phylum, color = Phylum)) + 
+  facet_wrap(~Phylum, scales = "free", nrow = 3) + 
+  geom_jitter(width = 0.2, alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+  scale_fill_manual(values = phylum_colors) + 
+  scale_color_manual(values = phylum_colors) + 
+  theme_bw() + 
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)
+  ) +
+  labs(x = "Season", y = "Relative Abundance", title = "Phylum Abundance by Season")
+
+
+```
+
+
+Now we will focus in on certain phyla of interest
+
+
+### Deinococcota
+
+
+```{r phylum-deinococcota, fig.width=7, fig.height=3.5}
+
+deinococcota_phylum <- 
+  phylum_df_season %>%
+  filter(Phylum == "Deinococcota") %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Deinococcota Phylum", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    legend.position = "right"
+  )
+
+deinococcota_phylum
+```
+
+
+### Myxococcota
+
+DID NOT RUN STATS AT ALL - CHECK 284
+
+
+```{r phylum-myxococcota, fig.width=7, fig.height=3.5}
+
+myxococcota_phylum <- 
+  phylum_df_season %>%
+  filter(Phylum == "Myxococcota") %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Myxococcota Phylum", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    legend.position = "right"
+  )
+
+myxococcota_phylum
+
+```
+
+### Bacillota
+
+
+```{r phylum-bacillota, fig.width=7, fig.height=3.5}
+
+bacillota_phylum <- 
+  phylum_df_season %>%
+  filter(Phylum == "Bacillota") %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Bacillota Phylum", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    legend.position = "right"
+  )
+
+bacillota_phylum
+
+```
+
+### Bacteroidota
+
+
+```{r phylum-bacteroidota, fig.width=7, fig.height=3.5}
+
+bacteroidota_phylum <- 
+  phylum_df_season %>%
+  filter(Phylum == "Bacteroidota") %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Bacteroidota Phylum", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    legend.position = "right"
+  )
+
+bacteroidota_phylum
+
+```
+
+### Pseudomonadota
+
+
+```{r phylum-pseudomonadota, fig.width=7, fig.height=3.5}
+
+pseudomonadota_phylum <- 
+  phylum_df_season %>%
+  filter(Phylum == "Pseudomonadota") %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Pseudomonadota Phylum", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    legend.position = "right"
+  )
+
+pseudomonadota_phylum
+
+```
+
+## Genus
+
+Now time to follow up with some deeper taxonomic analysis at the genus level.
+
+-Deinococcota
+-Bacteroidota
+
+```{r genus-df}
+
+genus_df_season <- 
+  scaled_physeq_season %>%
+  # Agglomerate all ASV counts within a phylum
+  tax_glom(taxrank = "Genus") %>%
+  # Calculate the relative abundance! 
+  transform_sample_counts(function(x) {x/sum(x)}) %>%
+  # Create a dataframe from phyloseq object
+  psmelt() %>%
+  #Filter out Phyla < 1 % 
+  #dplyr::filter(Abundance > 0.01) %>%
+  #Fix the station order 
+  mutate(environment_material = fct_relevel(environment_material, c(
+    "Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo", "Skimmed Milk Powder")))
+
+```
+
+### Deinococcota Genera
+
+```{r deino-genus, fig.width=6, fig.height=6}
+
+deino_genus <- 
+  genus_df_season %>%
+  filter(Phylum == "Deinococcota") %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  facet_wrap(~Genus, scales = "free_y", nrow = 1) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Deinococcota Genera", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    legend.position = "right"
+  )
+
+# View it
+deino_genus
+
+
+```
+
+### Bacteroidota Genera
+
+```{r bacteroid-genus, fig.width=9, fig.height=6}
+
+#See how many genera in Bacteroidota because I am curious
+genus_df_season %>% 
+  filter(Phylum == "Bacteroidota") %>% 
+  distinct(Genus) %>% 
+  nrow()
+
+#wow there are 195 genera, we simply cannot plot them all!
+
+#instead I will plot the 10 Bacteroidota genera with the highest mena abundance across all samples/seasons
+
+# Find top 10 Bacteroidota genera (highest mean abundance across all seasons/samples)
+top10_bacteroidota_genera <- genus_df_season %>%
+  filter(Phylum == "Bacteroidota") %>%
+  group_by(Genus) %>%
+  summarize(mean_abund = mean(Abundance, na.rm = TRUE)) %>%
+  arrange(desc(mean_abund)) %>%
+  slice_head(n = 10) %>%
+  pull(Genus)
+
+# View it!
+top10_bacteroidota_genera
+
+
+# Now plot only those top 10
+bacteroid_genus <- 
+  genus_df_season %>%
+  filter(Phylum == "Bacteroidota", Genus %in% top10_bacteroidota_genera) %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  facet_wrap(~Genus, scales = "free_y", nrow = 2) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Top 10 Bacteroidota Genera", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    strip.text = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+# View it
+bacteroid_genus
+
+```
+
+# ASV Level
+
+```{r ASV-df}
+
+# Note: The read depth MUST be normalized in some way: scale_reads 
+ASV_df_season <- 
+  scaled_physeq_season %>%
+  # Prune out ASVs that have fewer than 100 counts! 
+  ## LOOK AT HOW MANY ARE REMOVED! We scaled to 20090 reads! 
+  prune_taxa(taxa_sums(.) >= 2009, .) %>%
+  # agglomerate at the phylum level 
+  tax_glom(taxrank = "ASV") %>% 
+  # Transform counts to relative abundance 
+  transform_sample_counts(function (x) {x/sum(x)}) %>%
+  # Melt to a long format 
+  psmelt() %>%
+  # fix the order of date
+  mutate(environment_material = fct_relevel(environment_material, c(
+    "Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo", "Skimmed Milk Powder")))
+
+#View
+ASV_df_season
+
+```
+
+### Deinococcota ASVs
+
+```{r deino-asvs, width=6, fig.height=8}
+
+#Calculate top ASVs (mean abundance > 0.005)
+
+top_deino_ASVs <- 
+  ASV_df_season %>%  
+  filter(Phylum == "Deinococcota") %>%
+  group_by(ASV) %>%
+  summarize(mean_Abundance = mean(Abundance, na.rm = TRUE)) %>%
+  filter(mean_Abundance > 0.005) %>%
+  pull(ASV)
+
+#Plot
+deino_asv_sample_type <- 
+  ASV_df_season %>%  
+  filter(ASV %in% top_deino_ASVs) %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  facet_wrap(Genus~ASV, scales = "free_y", nrow = 2) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Top Deinococcota ASVs", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    strip.text = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+# View it
+deino_asv_sample_type
+
+
+```
+
+### Bacteroidota ASVs
+
+```{r bacteroid-asvs, fig.width=6, fig.height=8}
+
+#Calculate top ASVs (mean abundance > 0.005)
+
+top_bacteroid_ASVs <- 
+  ASV_df_season %>%  
+  filter(Phylum == "Bacteroidota") %>%
+  group_by(ASV) %>%
+  summarize(mean_Abundance = mean(Abundance, na.rm = TRUE)) %>%
+  filter(mean_Abundance > 0.005) %>%
+  pull(ASV)
+
+#Plot
+bacteroid_asv_sample_type <- 
+  ASV_df_season %>%  
+  filter(ASV %in% top_bacteroid_ASVs) %>%
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = season, color = season)) + 
+  facet_wrap(Genus~ASV, scales = "free_y", nrow = 2) + 
+  geom_boxplot(position = position_dodge(width = 0.7), alpha = 0.5, outlier.shape = NA) + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.7), alpha = 0.7) + 
+  theme_bw() + 
+  labs(title = "Top Bacteroidota ASVs", x = "Sample Type", y = "Relative Abundance") + 
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) + 
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+    strip.text = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+# View it
+bacteroid_asv_sample_type
+
+```
+
+
+### Identifying the 10 most abundant ASVs:
+
+```{r plot-top-asvs}
+
+#identify my top ten ASVs total (all samples)
+top_asvs_total <- names(sort(taxa_sums(scaled_physeq_season), decreasing = TRUE))[1:10]
+
+#View my top 10 ASVs
+top_asvs_total
+
+
+# Mid-lactation
+top_asvs_mid <- 
+  scaled_physeq_season %>%
+  # Filter for mid-lactation samples
+  subset_samples(season == "mid-lactation") %>% 
+   # Get the abundance for each ASV
+  taxa_sums() %>% 
+  sort(decreasing = TRUE) %>%
+  names() %>%
+  # Get the top 10
+  .[1:10]  
+
+# View the top 10 ASVs for mid-lactation
+top_asvs_mid
+
+
+
+# Late-lactation
+top_asvs_late <- 
+  scaled_physeq_season %>%
+  # Filter for late-lactation samples
+  subset_samples(season == "late-lactation") %>% 
+   # Get the abundance for each ASV
+  taxa_sums() %>% 
+  sort(decreasing = TRUE) %>%
+  names() %>%
+  # Get the top 10
+  .[1:10]  
+
+# View the top 10 ASVs for mid-lactation
+top_asvs_late
+
+
+```
+
+### Plotting most abundant ASVs
+
+
+
+```{r plot-most-abundant}
+
+#Plot top 10 abundant ASVs across all samples
+
+ASV_df_season %>%
+  filter(ASV %in% top_asvs_total) %>%
+  ggplot(aes(x = environment_material, y = Abundance,
+             fill = season, color = season)) +  # Map 'season' to fill and color
+  facet_wrap(Phylum ~ ASV, scales = "free_y", nrow = 2) +  # Facet by Phylum and ASV
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) +  # Add boxplot
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), 
+             alpha = 0.7, size = 2) +  # Adjust jitter for separation
+  theme_bw() +
+  labs(title = "Top 10 Total ASVs by Season") +
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) +
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+#Plot top ten most abundant ASVs in mid-lactation samples
+
+ASV_df_season %>%
+  filter(ASV %in% top_asvs_mid) %>%
+  ggplot(aes(x = environment_material, y = Abundance,
+             fill = season, color = season)) +  # Map 'season' to fill and color
+  facet_wrap(Phylum ~ ASV, scales = "free_y", nrow = 2) +  # Facet by Phylum and ASV
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) +  # Add boxplot
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), 
+             alpha = 0.7, size = 2) +  # Adjust jitter for separation
+  theme_bw() +
+  labs(title = "Top 10 Mid-Lactation ASVs by Season") +
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) +
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+#Plot top ten most abundant ASVs in late-lactation samples
+
+ASV_df_season %>%
+  filter(ASV %in% top_asvs_late) %>%
+  ggplot(aes(x = environment_material, y = Abundance,
+             fill = season, color = season)) +  # Map 'season' to fill and color
+  facet_wrap(Phylum ~ ASV, scales = "free_y", nrow = 2) +  # Facet by Phylum and ASV
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) +  # Add boxplot
+  geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), 
+             alpha = 0.7, size = 2) +  # Adjust jitter for separation
+  theme_bw() +
+  labs(title = "Top 10 Late-Lactation ASVs by Season") +
+  scale_color_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) +
+  scale_fill_manual(values = c("mid-lactation" = "skyblue", "late-lactation" = "tomato")) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+```
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
