@@ -129,6 +129,10 @@ table(metadata_df_season$season)
 
 glimpse(metadata_df_season)
 
+#Save
+save(metadata_df_season, 
+     file = "data/09_Seasonal_Ordination/metadata_df_season.RData")
+
 ```
 
 ### Sorensen
@@ -305,8 +309,10 @@ sample_data(scaled_physeq) <- sample_data(metadata_df_season)
 
 head(sample_data(scaled_physeq))
 
+scaled_physeq_season <- sample_data(scaled_physeq)
+
 # Save the updated phyloseq object
-save(scaled_physeq, file = "data/09_Seasonal_Ordination/scaled_physeq_season.RData")
+save(scaled_physeq_season, file = "data/09_Seasonal_Ordination/scaled_physeq_season.RData")
 
 
 ```

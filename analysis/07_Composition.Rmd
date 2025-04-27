@@ -42,6 +42,19 @@ Like we discussed a bit in class, especially after reading the Props et al., 201
 
 # Setup 
 
+## Timing of this script
+
+```{r rmd-start}
+# What time did we start running this script? 
+start_time <- Sys.time()
+```
+
+## Set the seed
+
+```{r set-seed}
+set.seed(111111)
+```
+
 ## Load Packages 
 ```{r load-packages}
 # Load in the packages 
