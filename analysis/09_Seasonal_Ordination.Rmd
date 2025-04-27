@@ -81,6 +81,8 @@ load("data/06_Ordination/scaled_physeq.RData")
 
 read.csv("data/06_Ordination/metadata_df_cut20000.csv")
 
+load("data/06_Ordination/metadata_df_cut20000.RData")
+
 ```
 
 # Beta Diversity: Dissimilarity Metrics in Microbial Ecology
@@ -303,6 +305,10 @@ sample_data(scaled_physeq) <- sample_data(metadata_df_season)
 
 head(sample_data(scaled_physeq))
 
+# Save the updated phyloseq object
+save(scaled_physeq, file = "data/09_Seasonal_Ordination/scaled_physeq_season.RData")
+
+
 ```
 
 ### Sorensen
@@ -464,11 +470,13 @@ sorensen_nmds_plot <-
   theme_bw() + 
   theme(legend.position = "right")
 
+sorensen_nmds_plot
+
 ```
 
 ### Bray-Curtis
 
-```{r nmds-sorensen, fig.height=3.5, fig.width=7}
+```{r nmds-bray, fig.height=3.5, fig.width=7}
 
 #Calculate NMDS with Bray-Curtis
 scaled_bray_nmds <- 
@@ -501,7 +509,7 @@ bray_nmds_plot
 scaled_uwunifrac_nmds <- 
   ordinate(physeq = scaled_physeq,
          method = "NMDS",
-         distance = "unifrac", binary = FALSE)
+         distance = "unifrac", weighted = FALSE)
 
 # Plot it: Bray-Curtis NMDS 
 uwunifrac_nmds_plot <- 
@@ -528,7 +536,7 @@ uwunifrac_nmds_plot
 scaled_wunifrac_nmds <- 
   ordinate(physeq = scaled_physeq,
          method = "NMDS",
-         distance = "unifrac", binary = TRUE)
+         distance = "unifrac", weighted = TRUE)
 
 # Plot it: Bray-Curtis NMDS 
 wunifrac_nmds_plot <- 
