@@ -419,7 +419,7 @@ Note that I also followed  up with Bacteroidota!
 
 Let's first calculate the genus data frame. 
 
-```{r genus-df, fig.width=12, fig.height=4}
+```{r genus-df}
 # Calculate the Family relative abundance 
 # Note: The read depth MUST be normalized in some way: scale_reads
 genus_df <- 
@@ -771,3 +771,24 @@ In the paper, they saw that "The skimmed milk powder generated during the mid-la
 Although for the homework I just did a very preliminary analysis at the ASV level, over the weekend I will do a more in-depth analysis of the literature, and will have time to make more plots to explore these results further! I also plan to redo a lot of these analyses after I have split up the samples into mid and late lactation periods.
 
 Finally, one thing I would like to reiterate is that there was only one cream silo sample, but throughout the paper they use this singular sample to make conclusions about the microbial communities in cream silos. I just have to say that I personally am very skeptical of this approach. 
+
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
