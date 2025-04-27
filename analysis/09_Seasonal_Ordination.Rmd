@@ -18,6 +18,8 @@ The goal of this document is to run an analysis on the between-sample (beta( div
 
 Unlike in my original 06_Ordination analysis, I do not need to evaluate sequencing depth and normalize read counts, as I have previously done this in my original homework document!
 
+In particular, I'm hoping that this seasonal/sample analysis will explain the weird grouping in my Skimmed Milk Powder samples.
+
 1. Calculate community **dis**similarities. Numbers between 0 and 1. If 0, completely similar versus if they are 1, then they're completely dissimilar. Here I will split up my communities by sample type *AND* season!!
     a. **Sorensen**: Shared Species as a binary value: Abundance-unweighted 
     b. **Bray-Curtis**: Shared Abundant species: Abundance-weighted
@@ -77,11 +79,13 @@ source("code/functions.R")
 
 load("data/06_Ordination/scaled_physeq.RData")
 
+read.csv("data/06_Ordination/metadata_df_cut20000.csv")
+
 ```
 
 # Beta Diversity: Dissimilarity Metrics in Microbial Ecology
 
-# 4. Calculating dissimilarity
+# Calculating dissimilarity
 
 Now, let's make distance objects of the dissimiliarity measures we used in class!
 
@@ -102,4 +106,474 @@ scaled_wUnifrac_dist <- phyloseq::distance(scaled_physeq, method = "wunifrac")
 ```
 
 
+# PERMANOVA: Testing Means/Centroids
 
+Here, we will focus on comparing the Sorensen and the Bray-Curtis. 
+
+First I will mutate my metadata to include a new column season to define mid- and late-lactation.
+
+
+```{r mutate-add-season-df}
+
+# Create a new column 'season' based on the Collection_Date
+metadata_df_season <- metadata_df_cut20000 %>%
+  mutate(season = case_when(
+    month(as.Date(Collection_Date, format = "%m/%d/%Y")) == 5 ~ "mid-lactation",  # May is mid-lactation
+    TRUE ~ "late-lactation"  # All other months are late-lactation
+  ))
+
+# Check if the new column is created correctly
+table(metadata_df_season$season)
+
+glimpse(metadata_df_season)
+
+```
+
+### Sorensen
+
+```{r PERMANOVA-categorical-sorensen}
+# Sorensen
+## 1. Run with by = terms for R² values, sensitive to order of variables! 
+## ALWAYS check and confirm the order of your terms and how they interact with each other.  
+sorensen_sample_adonis_terms1 <- adonis2(scaled_sorensen_dist ~ environment_material * season, data = metadata_df_season, by = "terms")
+
+sorensen_sample_adonis_terms1
+
+# Check the order of the terms
+sorensen_sample_adonis_terms2 <- adonis2(scaled_sorensen_dist ~ season * environment_material, data = metadata_df_season, by = "terms")
+
+sorensen_sample_adonis_terms2
+
+## 2. Run with by = "margin" for marginal p-values, which we can compare to the residuals from the first one. 
+
+sorensen_sample_adonis_margin <- adonis2(scaled_sorensen_dist ~ season * environment_material, data = metadata_df_season, by = "margin")
+
+sorensen_sample_adonis_margin
+```
+
+### Bray-Curtis
+
+```{r PERMANOVA-categorical-bray}
+# Bray-Curtis
+## ALWAYS check and confirm the order of your terms and how they interact with each other.  
+bray_sample_adonis_terms1 <- adonis2(scaled_bray_dist ~ environment_material * season, data = metadata_df_season, by = "terms")
+
+bray_sample_adonis_terms1
+
+bray_sample_adonis_terms2 <- adonis2(scaled_bray_dist ~ season * environment_material, data = metadata_df_season, by = "terms")
+
+bray_sample_adonis_terms2
+
+
+## 2. Run with by = "margin" for marginal p-values
+bray_sample_adonis_margin <- adonis2(scaled_bray_dist ~ season * environment_material, data = metadata_df_season, by = "margin")
+
+bray_sample_adonis_margin
+```
+
+
+### Unweighted-Unifrac
+
+```{r PERMANOVA-categorical-uwunifrac}
+# Unweighted Unifrac
+## ALWAYS check and confirm the order of your terms and how they interact with each other.
+uUnifrac_sample_adonis_terms1 <- adonis2(scaled_uUnifrac_dist~ environment_material * season, data = metadata_df_season, by = "terms")
+
+uUnifrac_sample_adonis_terms1
+
+uUnifrac_sample_adonis_terms2 <- adonis2(scaled_uUnifrac_dist ~ season * environment_material, data = metadata_df_season, by = "terms")
+
+uUnifrac_sample_adonis_terms2
+
+## 2. Run with by = "margin" for marginal p-values
+uUnifrac_sample_adonis_margin <- adonis2(scaled_uUnifrac_dist ~ season * environment_material, data = metadata_df_season, by = "margin")
+
+uUnifrac_sample_adonis_margin
+```
+
+
+### Weighted-Unifrac
+
+```{r PERMANOVA-categorical-wunifrac}
+# Weighted Unifrac
+## ALWAYS check and confirm the order of your terms and how they interact with each other.
+wUnifrac_sample_adonis_terms1 <- adonis2(scaled_wUnifrac_dist~ environment_material * season, data = metadata_df_season, by = "terms")
+
+wUnifrac_sample_adonis_terms1
+
+wUnifrac_sample_adonis_terms2 <- adonis2(scaled_wUnifrac_dist ~ season * environment_material, data = metadata_df_season, by = "terms")
+
+wUnifrac_sample_adonis_terms2
+
+## 2. Run with by = "margin" for marginal p-values
+wUnifrac_sample_adonis_margin <- adonis2(scaled_wUnifrac_dist ~ season * environment_material, data = metadata_df_season, by = "margin")
+
+wUnifrac_sample_adonis_margin
+```
+
+# Betadisper: Testing Variances/Dispersions
+
+## Sorensen
+
+```{r betadisper-sorensen}
+
+# Homogeneity of Disperson test with beta dispr
+
+# Sorensen Betadisper - Sample Type 
+dispr_sorensen_sample <- betadisper(scaled_sorensen_dist, metadata_df_season$environment_material)
+# permutest() performs a non-parametric permutation test, which is robust and valid for the kind of data used in beta diversity analysis (e.g., dissimilarity matrices).
+
+permutest(dispr_sorensen_sample)
+
+# Sorensen Betadisper - Season  
+dispr_sorensen_season <- betadisper(scaled_sorensen_dist, metadata_df_season$season)
+
+permutest(dispr_sorensen_season)
+
+```
+
+## Bray-Curtis
+
+```{r betadisper-bc}
+
+# Homogeneity of Disperson test with beta dispr
+
+# Bray-Curtis Betadisper - Sample Type 
+dispr_bray_sample <- betadisper(scaled_bray_dist, metadata_df_season$environment_material)
+# permutest() performs a non-parametric permutation test, which is robust and valid for the kind of data used in beta diversity analysis (e.g., dissimilarity matrices).
+
+permutest(dispr_bray_sample)
+
+# Bray-Curtis Betadisper - Season  
+dispr_bray_season <- betadisper(scaled_bray_dist, metadata_df_season$season)
+
+permutest(dispr_bray_season)
+
+```
+
+## Unweighted-Unifrac
+
+```{r betadisper-uunifrac}
+
+# Homogeneity of Disperson test with beta dispr
+
+# Unweighted Unifrac Betadisper - Sample Type 
+dispr_uUnifrac_sample <- betadisper(scaled_uUnifrac_dist, metadata_df_season$environment_material)
+# permutest() performs a non-parametric permutation test, which is robust and valid for the kind of data used in beta diversity analysis (e.g., dissimilarity matrices).
+
+permutest(dispr_uUnifrac_sample)
+
+# Unweighted Unifrac Betadisper - Season  
+dispr_uUnifrac_season <- betadisper(scaled_uUnifrac_dist, metadata_df_season$season)
+
+permutest(dispr_bray_season)
+
+```
+
+## Weighted-Unifrac
+
+```{r betadisper-wunifrac}
+
+# Homogeneity of Disperson test with beta dispr
+
+# Weighted Unifrac Betadisper - Sample Type 
+dispr_wUnifrac_sample <- betadisper(scaled_wUnifrac_dist, metadata_df_season$environment_material)
+# permutest() performs a non-parametric permutation test, which is robust and valid for the kind of data used in beta diversity analysis (e.g., dissimilarity matrices).
+
+permutest(dispr_wUnifrac_sample)
+
+# Weighted Unifrac Betadisper - Season  
+dispr_wUnifrac_season <- betadisper(scaled_wUnifrac_dist, metadata_df_season$season)
+
+permutest(dispr_wUnifrac_season)
+
+```
+
+# 6. Visualize Community Dissimilarity with Ordination
+
+## PCoA: Principal Coordinates Analysis
+
+```{r update-metadata-df}
+
+#To include seasons, need to update the sample_data in my phyloseq object
+
+sample_data(scaled_physeq) <- sample_data(metadata_df_season)
+
+#Intuition check
+
+head(sample_data(scaled_physeq))
+
+```
+
+### Sorensen
+
+```{r pcoa-sorensen, fig.height=3.5, fig.width=7}
+
+# First, calculate PCoA with Soresen
+scaled_soren_pcoa <- 
+  ordinate(physeq = scaled_physeq,
+         method = "PCoA",
+         distance = "bray", binary = TRUE)
+
+# Take a quick look
+str(scaled_soren_pcoa)
+
+# Plot it: Sorensen PCoA  
+sorensen_pcoa_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_soren_pcoa,
+                color = "environment_material",
+                shape = "season",
+                title = "Sorensen PCoA") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+sorensen_pcoa_plot
+
+```
+
+### Bray-Curtis
+
+```{r pcoa-bray, fig.height=3.5, fig.width=7}
+
+# First, calculate PCoA with Bray
+scaled_bray_pcoa <- 
+  ordinate(physeq = scaled_physeq,
+         method = "PCoA",
+         distance = "bray", binary = FALSE)
+
+# Take a quick look
+str(scaled_bray_pcoa)
+
+# Plot it: Bray PCoA  
+bray_pcoa_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_bray_pcoa,
+                color = "environment_material",
+                shape = "season",
+                title = "Bray-Curtis PCoA") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+bray_pcoa_plot
+
+```
+
+### Unweighted-Unifrac
+
+```{r pcoa-uwunifrac, fig.height=3.5, fig.width=7}
+
+# First, calculate PCoA with unweighted UniFrac
+scaled_uwunifrac_pcoa <- 
+  ordinate(physeq = scaled_physeq,
+           method = "PCoA",
+           distance = "unifrac",  # change here!
+           weighted = FALSE)      
+
+# Take a quick look
+str(scaled_uwunifrac_pcoa)
+
+# Plot it: Unweighted UniFrac PCoA  
+uwunifrac_pcoa_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                  ordination = scaled_uwunifrac_pcoa,
+                  color = "environment_material",
+                  shape = "season",
+                  title = "Unweighted-UniFrac PCoA") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+uwunifrac_pcoa_plot
+
+
+```
+
+### Weighted-Unifrac
+
+```{r pcoa-wunifrac, fig.height=3.5, fig.width=7}
+
+# First, calculate PCoA with Weighted-UniFrac
+scaled_wunifrac_pcoa <- 
+  ordinate(physeq = scaled_physeq,
+           method = "PCoA",
+           distance = "unifrac",  
+           weighted = TRUE)      
+
+# Take a quick look
+str(scaled_wunifrac_pcoa)
+
+# Plot it: Weighted-UniFrac PCoA  
+wunifrac_pcoa_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                  ordination = scaled_wunifrac_pcoa,
+                  color = "environment_material",
+                  shape = "season",
+                  title = "Weighted-UniFrac PCoA") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = environment_material)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+wunifrac_pcoa_plot
+
+```
+
+Now show all the PCoA plot together!
+
+```{r combine-pcoa}
+
+# Show the plots 
+sorensen_pcoa_plot + bray_pcoa_plot + uwunifrac_pcoa_plot + wunifrac_pcoa_plot +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+
+```
+
+## NMDS: Non-Metric Multidimensional Scaling
+
+### Sorensen
+
+```{r nmds-sorensen, fig.height=3.5, fig.width=7}
+
+## SORENSEN 
+scaled_soren_nmds <- 
+  ordinate(physeq = scaled_physeq,
+         method = "NMDS",
+         distance = "bray", binary = TRUE)
+
+# Plot it! 
+sorensen_nmds_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_soren_nmds,
+                color = "environment_material",
+                shape = "season",
+                title = "Sorensen NMDS") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = season)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+```
+
+### Bray-Curtis
+
+```{r nmds-sorensen, fig.height=3.5, fig.width=7}
+
+#Calculate NMDS with Bray-Curtis
+scaled_bray_nmds <- 
+  ordinate(physeq = scaled_physeq,
+         method = "NMDS",
+         distance = "bray", binary = FALSE)
+
+# Plot it: Bray-Curtis NMDS 
+bray_nmds_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_bray_nmds,
+                color = "environment_material",
+                shape = "season",
+                title = "Bray-Curtis NMDS") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = season)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+bray_nmds_plot
+
+```
+
+### Unweighted-Unifrac
+
+```{r nmds-unweighted-unifrac, fig.height=3.5, fig.width=7}
+
+#Calculate NMDS with Unweighted-Unifrac
+scaled_uwunifrac_nmds <- 
+  ordinate(physeq = scaled_physeq,
+         method = "NMDS",
+         distance = "unifrac", binary = FALSE)
+
+# Plot it: Bray-Curtis NMDS 
+uwunifrac_nmds_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_uwunifrac_nmds,
+                color = "environment_material",
+                shape = "season",
+                title = "Unweighted-Unifrac NMDS") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = season)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+uwunifrac_nmds_plot
+
+```
+
+### Weighted-Unifrac
+
+```{r nmds-weighted-unifrac, fig.height=3.5, fig.width=7}
+
+#Calculate NMDS with Weighted-Unifrac
+scaled_wunifrac_nmds <- 
+  ordinate(physeq = scaled_physeq,
+         method = "NMDS",
+         distance = "unifrac", binary = TRUE)
+
+# Plot it: Bray-Curtis NMDS 
+wunifrac_nmds_plot <- 
+  plot_ordination(physeq = scaled_physeq,
+                ordination = scaled_wunifrac_nmds,
+                color = "environment_material",
+                shape = "season",
+                title = "Weighted-Unifrac NMDS") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_shape_manual(values = c(15, 16)) + 
+  geom_point(size = 5, alpha = 0.5, aes(color = season)) + 
+  theme_bw() + 
+  theme(legend.position = "right")
+
+wunifrac_nmds_plot
+
+```
+
+Now combine all the NMDS plots together!
+
+```{r combine-nmds}
+
+# Show the plots 
+sorensen_nmds_plot + bray_nmds_plot + uwunifrac_nmds_plot + wunifrac_nmds_plot +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+
+```
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```

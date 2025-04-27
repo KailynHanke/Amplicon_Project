@@ -74,6 +74,7 @@ set.seed(111111)
 
 ## Load Packages, colors & functions  
 ```{r load-packages}
+
 pacman::p_load(tidyverse, devtools, phyloseq, patchwork, vegan, 
                install = FALSE)
 
@@ -91,8 +92,6 @@ source("code/functions.R")
 ```{r load-data}
 
 # load phyloseq object
-#load("data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
-#midpoint_rooted_physeq_cut
 
 load("data/04_PhylogeneticTree/midpoint_rooted_physeq_cut.RData")
 midpoint_rooted_physeq_cut
@@ -278,6 +277,18 @@ scaled_physeq
 # Save it in 06_Ordination 
 save(scaled_physeq, 
      file = "data/06_Ordination/scaled_physeq.RData")
+
+
+# Make a metadata dataframe 
+metadata_df_cut20000 <- 
+  midpoint_rooted_physeq_cut20000 %>%
+  sample_data() %>%
+  data.frame()
+
+
+#Save it in data file
+write.csv(metadata_df_cut20000, "data/06_Ordination/metadata_df_cut20000.csv", row.names = TRUE)
+
 
 # Look at it more!
 #View(data.frame(otu_table(midpoint_rooted_physeq_cut)))
