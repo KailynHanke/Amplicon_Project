@@ -511,9 +511,134 @@ genus_df %>%
   distinct(Genus) %>% 
   nrow()
 
+```
+
+
+### A4. Pseudomonas
+
+```{r genus-pseudomonas, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# Pseudomonas - y: abundance, x: sample, dot plot + boxplot
+pseudomonas_genus_sample_type <- 
+  genus_df %>%
+  dplyr::filter(Genus == "Pseudomonas") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Relative Abundance of Pseudomonas by Sample Type") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+pseudomonas_genus_sample_type
+
+```
+### Acinetobacter
+
+```{r genus-acinetobacter, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# acinetobacter - y: abundance, x: sample, dot plot + boxplot
+acinetobacter_genus_sample_type <- 
+  genus_df %>%
+  dplyr::filter(Genus == "Acinetobacter") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Relative Abundance of Acinetobacter by Sample Type") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+acinetobacter_genus_sample_type
 
 ```
 
+### Lactococcus
+
+```{r genus-lactococcus, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# lactococcus - y: abundance, x: sample, dot plot + boxplot
+lactococcus_genus_sample_type <- 
+  genus_df %>%
+  dplyr::filter(Genus == "Lactococcus") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Relative Abundance of Lactococcus by Sample Type") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+pseudomonas_genus_sample_type + lactococcus_genus_sample_type + acinetobacter_genus_sample_type
+
+```
+### Geobacillus
+
+```{r genus-geobacillus, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# geobacillus - y: abundance, x: sample, dot plot + boxplot
+geobacillus_genus_sample_type <- 
+  genus_df %>%
+  dplyr::filter(Genus == "Geobacillus") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Relative Abundance of Geobacillus by Sample Type") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+geobacillus_genus_sample_type
+
+```
+### Thermus
+
+```{r genus-thermus, fig.width=7, fig.height=3.5}
+# Narrow in on a specific group
+# thermus - y: abundance, x: sample, dot plot + boxplot
+thermus_genus_sample_type <- 
+  genus_df %>%
+  dplyr::filter(Genus == "Thermus") %>%
+  # build the plot 
+  ggplot(aes(x = environment_material, y = Abundance, 
+             fill = environment_material, color = environment_material)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Relative Abundance of Thermus by Sample Type") + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+          legend.position = "right")
+
+#View
+thermus_genus_sample_type
+
+#plot together
+
+thermus_genus_sample_type + geobacillus_genus_sample_type
+
+```
 Okay a few quick notes here! I struggled so much to get this plot together, and I think it was because there were way to many genera to be displayed on one plot (it looked like a mess of random numbers when I plotted it). So, I then went and selected the 10 genera with the highest relative abundance. I also was curious to see how many Bacteroidota genera were there, and I found out there were 195! Wow!
 
 
@@ -597,6 +722,9 @@ deino_asv_sample_type <-
         legend.position = "none")
 
 deino_asv_sample_type
+
+
+
 ```
 
 ### C. Bacteroidota ASVs 
