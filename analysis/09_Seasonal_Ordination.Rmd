@@ -545,7 +545,7 @@ scaled_wunifrac_nmds <-
          method = "NMDS",
          distance = "unifrac", weighted = TRUE)
 
-# Plot it: Bray-Curtis NMDS 
+# Plot it: Weighted-Unifrac NMDS 
 wunifrac_nmds_plot <- 
   plot_ordination(physeq = scaled_physeq,
                 ordination = scaled_wunifrac_nmds,
@@ -571,6 +571,11 @@ sorensen_nmds_plot + bray_nmds_plot + uwunifrac_nmds_plot + wunifrac_nmds_plot +
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "A")
 
+# Show the plots 
+wunifrac_pcoa_plot + wunifrac_nmds_plot +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+
 ```
 
 # Final info for Reproducibility 
@@ -592,3 +597,5 @@ elapsed_time
 # Ensure reproducibility with package version information
 devtools::session_info()
 ```
+
+
