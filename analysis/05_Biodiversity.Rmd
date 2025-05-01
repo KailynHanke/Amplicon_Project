@@ -1,5 +1,5 @@
 ---
-title: "Biodiversity across a salinity gradient"
+title: "Biodiversity across dairy samples in a skim milk powder manufacturing pipeline"
 author: "Kailyn Hanke"
 date: "2025-04-09"
 output: html_document
@@ -382,7 +382,7 @@ My initial analysis:
     -It appears as though "Skimmed Milk Powder" and "Skimmed Milk Silo" have bimodal distributions.
     
 - *Simpson's Diversity: q = 2* 
-    - It appears as though the "Skimmed Milk Powder" and "Skimmed Milk Silo" samples have bimodal distributions.
+    - It appears as though the "Skimmed Milk Powder" and "Skimmed Milk Silo" samples have bimodal distributions. Note that I will explore this further in my 08_Seasonality_Biodiversity analysis document.
       - "Skimmed Milk Powder" samples: tend to have more dominant taxa/higher diversity with ~25 dominant species versus samples that have lower diversity around ~15 species.
       - "Skimmed Milk Silo" samples: tend to have more dominant taxa/higher diversity with ~25-30 dominant species versus samples that have lower diversity around ~10-15 species.
     
