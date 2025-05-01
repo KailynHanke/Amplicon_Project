@@ -483,8 +483,7 @@ obs_rich_df_cut <-
 
 obs_rich_df_cut$environment_material <- factor(
   obs_rich_df_cut$environment_material,
-  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Cream Silo",
-             "Skimmed Milk Powder", "Skimmed Milk Silo", "Whole Milk Silo")
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo", "Skimmed Milk Powder")
 )
 
 
@@ -528,16 +527,18 @@ richness_boxplot_envmat <-
             alpha = 0.3,
             outlier.shape = NA) + 
   geom_jitter(aes(color = environment_material), width = 0.2, size = 1.5) + 
-  labs(y = "Observed Richness (q = 0)", 
+  labs(y = "# of Total ASVs (Richness)", 
        title = "Observed Richness by Environment Material") + 
   stat_pvalue_manual(dunn_sample_envmat_rich, hide.ns = TRUE,
-                     tip.length = 0, step.increase = 0.01) +
+                     tip.length = 0, step.increase = 0.0000025) +
   labs(subtitle = get_test_label(kruskal_sample_rich, detailed = TRUE),
        caption = get_pwc_label(dunn_sample_envmat_rich)) +
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)) +
+  scale_y_continuous(limits = c(0, 4700))
+
 
 #look at it
 richness_boxplot_envmat
@@ -560,8 +561,7 @@ obs_shannon_df <- obs_div_df_cut %>%
 
 obs_shannon_df$environment_material <- factor(
   obs_shannon_df$environment_material,
-  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Cream Silo",
-             "Skimmed Milk Powder", "Skimmed Milk Silo", "Whole Milk Silo")
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo", "Skimmed Milk Powder")
 )
 
 # Perform Kruskal-Wallis test on Shannon Diversity by sample type
@@ -611,8 +611,7 @@ obs_simpson_df <- obs_div_df_cut %>%
 
 obs_simpson_df$environment_material <- factor(
   obs_simpson_df$environment_material,
-  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Cream Silo",
-             "Skimmed Milk Powder", "Skimmed Milk Silo", "Whole Milk Silo")
+  levels = c("Bulk Tank Milk", "Collection Tanker Milk", "Whole Milk Silo", "Cream Silo", "Skimmed Milk Silo", "Skimmed Milk Powder")
 )
 
 # Perform Kruskal-Wallis test on simpson Diversity by sample type
@@ -638,16 +637,17 @@ simpson_boxplot_envmat <-
             alpha = 0.3,
             outlier.shape = NA) + 
   geom_jitter(aes(color = environment_material), width = 0.2, size = 1.5) + 
-  labs(y = "Simpson Diversity (q = 2)", 
+  labs(y = "# of Dominant ASVs (Simpson)",
        title = "Simpson Diversity by Environment Material") + 
   stat_pvalue_manual(dunn_sample_simpson, hide.ns = TRUE,
-                     tip.length = 0, step.increase = 0.01) +
+                     tip.length = 0, step.increase = 0.0025) +
   labs(subtitle = get_test_label(kruskal_sample_simpson, detailed = TRUE),
        caption = get_pwc_label(dunn_sample_simpson)) +
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)) +
+  scale_y_continuous(limits = c(0, 350))
 
 
 #look at it
@@ -657,6 +657,8 @@ simpson_boxplot_envmat
 
 richness_boxplot_envmat + shannon_boxplot_envmat + simpson_boxplot_envmat
 
+
+richness_boxplot_envmat + simpson_boxplot_envmat
 ```
 INTERPRETATION #2:  If you have categorical data, what can you conclude regarding the role that all ASVs (richess, q = 0) versus common ASVs (Shannon, q = 1) versus dominant ASVs (Simpson, q = 2) have on the biodiversity of your samples as it relates to your variable of interest?
 
