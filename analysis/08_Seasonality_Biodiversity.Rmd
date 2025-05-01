@@ -1,8 +1,9 @@
 ---
-title: "Exploring seasonality-based differences in biodiversity in dairy samples across a processing pipeline"
+title: "Exploring seasonal biodiversity differences in dairy samples across a processing pipeline"
 author: "Kailyn Hanke"
 date: "2025-04-26"
 output: html_document
+bibliography: references.bib
 editor_options: 
   chunk_output_type: console
 ---
@@ -16,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
 
 The goal of this document is to run an analysis on the within-sample biodiversity of the samples in my project, similar to the analysis that I ran in 05_Biodiversity. This is the first of three new analysis documents I will make (I will subsequently make 09_Seasonality_Ordination and 10_Seasonality_Composition). 
 
-When I initially completed my homework assignments, I ran my biodiversity, ordination and composition analysis without splitting my data up between mid-lactation and late-lactation samples (sample seasonality). This was a great starting point, but for my presentation and to wrap up this project, I really wanted to run additional analysis where I also classified the seasonality of my samples to mimic the analysis done in the paper where this data is originally from.
+When I initially completed my homework assignments, I ran my biodiversity, ordination and composition analysis without splitting my data up between mid-lactation and late-lactation samples (sample seasonality). This was a great starting point, but for my presentation and to wrap up this project, I really wanted to run additional analysis where I also consider the "seasonality" of my samples to mimic the analysis done in the paper where this data is originally from [@mchughTrackingDairyMicrobiota2020].
 
 I thought that making separate analysis documents was probably the best way to maintain organization within my project, while providing me with a little piece of mind I would not mess up the analysis I did in my original homework documents. It's super cool that I have the skills to do this - hopefully my organization and reproducibility continue to improve while I work on these documents!
 
@@ -143,8 +144,26 @@ Now we are going to look at diversity by sample type and collection season.
 obs_div_df_cut <- obs_div_df_cut %>%
   mutate(env_season = paste(environment_material, season, sep = "_"))
 
+
 # Now plot!
 obs_div_df_cut %>%
+  ggplot(aes(x = env_season, y = qD, fill = environment_material, color = environment_material)) + 
+  facet_wrap(.~Order.q, scales = "free_y") + 
+  geom_jitter() + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+  labs(y = "Effective Number of ASVs") + 
+  theme_bw() + 
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+
+# Now plot!
+obs_div_df_cut %>%
+  filter(Order.q %in% c(0, 2)) %>% 
   ggplot(aes(x = env_season, y = qD, fill = environment_material, color = environment_material)) + 
   facet_wrap(.~Order.q, scales = "free_y") + 
   geom_jitter() + 
@@ -315,6 +334,38 @@ obs_div_df_cut %>%
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 #add stars to plot cannot figure out
+
+# Set the order for env_season
+obs_div_df_cut$env_season <- factor(
+  obs_div_df_cut$env_season,
+  levels = c(
+    "Bulk Tank Milk - mid-lactation", "Bulk Tank Milk - late-lactation",
+    "Collection Tanker Milk - mid-lactation", "Collection Tanker Milk - late-lactation",
+    "Whole Milk Silo - mid-lactation", "Whole Milk Silo - late-lactation",
+    "Cream Silo - mid-lactation", "Cream Silo - late-lactation",
+    "Skimmed Milk Silo - mid-lactation", "Skimmed Milk Silo - late-lactation",
+    "Skimmed Milk Powder - mid-lactation", "Skimmed Milk Powder - late-lactation"
+  )
+)
+
+# Now plot it!
+obs_div_df_cut %>%
+  filter(Order.q %in% c(0, 2)) %>%
+  ggplot(aes(x = env_season, y = qD, fill = environment_material, color = environment_material)) + 
+  facet_wrap(.~Order.q, scales = "free_y") + 
+  geom_jitter(width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  scale_color_manual(values = environment_colors) + 
+  scale_fill_manual(values = environment_colors) + 
+  labs(y = "Effective Number of ASVs") + 
+  theme_bw() + 
+  theme(
+    legend.position = "bottom",
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)
+  )
+
+
 
 ```
 

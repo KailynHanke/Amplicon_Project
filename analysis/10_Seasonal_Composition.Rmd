@@ -222,7 +222,7 @@ stacked_plot_late
 
 
 ```
-See how in Skimmed Milk powder theere is a group of samples where the top ten phyla do not cover close to 100% of the abundance. I will now plot late-lactation phyla without filtering top ten to see which phyla (if there is only one) will fill that gap!
+See how in Skimmed Milk powder there is a group of samples where the top ten phyla do not cover close to 100% of the abundance. I will now plot late-lactation phyla without filtering top ten to see which phyla (if there is only one) will fill that gap!
 
 ```{r phylum-stacked-bar-ll-full, fig.width=9, fig.height=3.5}
 
@@ -338,6 +338,66 @@ phylum_df_season %>%
     axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)
   ) +
   labs(x = "Season", y = "Relative Abundance", title = "Phylum Abundance by Season")
+
+```
+
+```{r add-stats-11phyla}
+
+
+# Do Wilcoxon test for each Phylum
+wilcox_results <- phylum_df_season %>%
+  filter(Phylum %in% c(
+    "Bacillota", "Pseudomonadota", "Bacteroidota", "Actinomycetota", "Verrucomicrobiota", "Spirochaetota", "Thermodesulfobacteriota",
+    "Acidobacteriota", "Planctomycetota", "Deinococcota", "Myxococcota"
+  )) %>%
+  group_by(Phylum) %>%
+  wilcox_test(Abundance ~ season) %>%
+  adjust_pvalue(method = "fdr") %>%  # Optional: adjust for multiple testing (FDR)
+  add_significance("p.adj")
+
+
+#fix sig plot
+
+# Calculate the maximum Abundance for each Phylum
+phylum_max <- phylum_df_season %>%
+  group_by(Phylum) %>%
+  summarise(max_abundance = max(Abundance, na.rm = TRUE)) %>%
+  mutate(y.position = 1.05 * max_abundance)  # Add 5% extra space
+
+
+# Assuming your wilcox_results has a 'Phylum' column
+wilcox_results2 <- wilcox_results %>%
+  left_join(phylum_max, by = "Phylum")
+
+# Plot
+phylum_df_season %>%
+  filter(Phylum %in% c(
+    "Bacillota", "Pseudomonadota", "Bacteroidota", "Actinomycetota", "Verrucomicrobiota", "Spirochaetota", "Thermodesulfobacteriota",
+    "Acidobacteriota", "Planctomycetota", "Deinococcota", "Myxococcota"
+  )) %>%
+  ggplot(aes(x = season, y = Abundance, fill = Phylum, color = Phylum)) + 
+  facet_wrap(~Phylum, scales = "free", nrow = 3) + 
+  geom_jitter(width = 0.2, alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+  scale_fill_manual(values = phylum_colors) + 
+  scale_color_manual(values = phylum_colors) + 
+  theme_bw() + 
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)
+  ) +
+  labs(x = "Season", y = "Relative Abundance", title = "Phylum Abundance by Season") +
+  stat_pvalue_manual(
+  wilcox_results2,
+  label = "p.adj.signif",
+  y.position = "y.position",   # <-- dynamic y-positions!
+  bracket.size = 0.5,
+  tip.length = 0.01,
+  size = 5
+)
+
+
+
 
 
 ```
