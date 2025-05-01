@@ -579,7 +579,7 @@ deino_genus <-
     legend.position = "right"
   )
 
-# View it
+# View
 deino_genus
 
 
@@ -862,3 +862,4 @@ elapsed_time
 # Ensure reproducibility with package version information
 devtools::session_info()
 ```
+
