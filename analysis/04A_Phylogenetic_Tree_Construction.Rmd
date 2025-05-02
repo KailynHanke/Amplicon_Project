@@ -7,9 +7,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Goals 
+In this analysis document I am going to make a phylogenetic tree so we can use it for phylogenetic community analyses like phylogenetic Hill Numbers and the UniFrac beta-diversity measures. I will be using data from a 2020 paper titled: "Tracking the Dairy Microbiota from Farm Bulk Tank to Skimmed Milk Powder" (@mchughTrackingDairyMicrobiota2020). By analyzing this data I want to answer the broad research question: How does microbial diversity change throughout the skim milk powder manufacturing process?
 
-The goal of this script is to make a phylogenetic tree so we can use it for phylogenetic community analyses like phylogenetic Hill Numbers and the UniFrac beta-diversity measures. 
+# Goals 
 
 1. Load in pre-processed phyloseq object. 
 2. Create ASV fasta file from the phyloseq object.
@@ -127,6 +127,10 @@ echo "The working directory is $PWD"
     # specify the output tree file 
 #FastTree -nt -gtr -fastest -log data/04_PhylogeneticTree/FastTree.log data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta > data/04_PhylogeneticTree/ASVs_unrooted.tree
 ```
+# Final Thoughts
+
+In this document I made a phylogenetic tree so I can use it for phylogenetic community analyses like phylogenetic Hill Numbers and the UniFrac beta-diversity measures moving forward.
+
 # Final info for Reproducibility 
 
 ## Check Render Time

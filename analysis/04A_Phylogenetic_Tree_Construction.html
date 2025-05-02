@@ -358,11 +358,16 @@ FastTree2</h1>
 </div>
 
 
+<p>In this analysis document I am going to make a phylogenetic tree so
+we can use it for phylogenetic community analyses like phylogenetic Hill
+Numbers and the UniFrac beta-diversity measures. I will be using data
+from a 2020 paper titled: “Tracking the Dairy Microbiota from Farm Bulk
+Tank to Skimmed Milk Powder” (<span class="citation">@mchughTrackingDairyMicrobiota2020</span>). By
+analyzing this data I want to answer the broad research question: How
+does microbial diversity change throughout the skim milk powder
+manufacturing process?</p>
 <div id="goals" class="section level1">
 <h1>Goals</h1>
-<p>The goal of this script is to make a phylogenetic tree so we can use
-it for phylogenetic community analyses like phylogenetic Hill Numbers
-and the UniFrac beta-diversity measures.</p>
 <ol style="list-style-type: decimal">
 <li>Load in pre-processed phyloseq object.</li>
 <li>Create ASV fasta file from the phyloseq object.</li>
@@ -459,7 +464,7 @@ write(asv_seq_fasta,
 <pre class="bash"><code># Write bash code to run MAFFT... DO CTRL+ALT+ENTER
 # First provide the path to MAFFT
 # Note to increase knit speed, changed &quot;eval = FALSE&quot;
-export PATH=/programs/mafft/bin:$PATH
+#export PATH=/programs/mafft/bin:$PATH
 
 # Where am I? 
 echo &quot;The working directory is $PWD&quot;
@@ -468,7 +473,8 @@ echo &quot;The working directory is $PWD&quot;
 RANDOM=111111
 
 # Now, actually run MAFFT
-/programs/mafft/bin/mafft --auto data/04_PhylogeneticTree/preprocessed_ASVs.fasta &gt; data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta</code></pre>
+#/programs/mafft/bin/mafft --auto data/04_PhylogeneticTree/preprocessed_ASVs.fasta &gt; data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta</code></pre>
+<pre><code>## The working directory is /local/workdir/kah357/Amplicon_Project</code></pre>
 </div>
 <div id="calculate-the-phylogenetic-tree-with-fasttree2" class="section level1">
 <h1>4. Calculate the phylogenetic tree with FastTree2</h1>
@@ -479,7 +485,7 @@ echo &quot;The working directory is $PWD&quot;
 
 # Load fasttree 
 # Provide export path to fasttree 
-export PATH=/programs/FastTree-2.1.11:$PATH
+#export PATH=/programs/FastTree-2.1.11:$PATH
 
 # Run Fasttree to generate phylogenetic tree 
 # parameters: 
@@ -489,7 +495,14 @@ export PATH=/programs/FastTree-2.1.11:$PATH
     # -log = output a log file 
     # input alignment file 
     # specify the output tree file 
-FastTree -nt -gtr -fastest -log data/04_PhylogeneticTree/FastTree.log data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta &gt; data/04_PhylogeneticTree/ASVs_unrooted.tree</code></pre>
+#FastTree -nt -gtr -fastest -log data/04_PhylogeneticTree/FastTree.log data/04_PhylogeneticTree/MAFFT_aligned_ASVs.fasta &gt; data/04_PhylogeneticTree/ASVs_unrooted.tree</code></pre>
+<pre><code>## The working directory is /local/workdir/kah357/Amplicon_Project</code></pre>
+</div>
+<div id="final-thoughts" class="section level1">
+<h1>Final Thoughts</h1>
+<p>In this document I made a phylogenetic tree so I can use it for
+phylogenetic community analyses like phylogenetic Hill Numbers and the
+UniFrac beta-diversity measures moving forward.</p>
 </div>
 <div id="final-info-for-reproducibility" class="section level1">
 <h1>Final info for Reproducibility</h1>
@@ -498,11 +511,11 @@ FastTree -nt -gtr -fastest -log data/04_PhylogeneticTree/FastTree.log data/04_Ph
 <pre class="r"><code># Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2025-04-03 13:02:19 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-05-02 16:49:57 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 40.538 secs</code></pre>
+<pre><code>## Time difference of 13.552 secs</code></pre>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session Information</h2>
@@ -518,7 +531,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2025-04-03
+##  date     2025-05-02
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────
