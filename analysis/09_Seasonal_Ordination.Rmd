@@ -12,13 +12,14 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.path = "../figures/09_Seasonal_Ordination/")
 ```
 
-#Goals
 
-The goal of this document is to run an analysis on the between-sample (beta( diversity of the samples in my project, similar to the analysis that I ran in 06_Ordination. This is the second of three new analysis documents I will make (I have previously made 08_Seasonal_Biodiversity and will subsequently make 10_Seasonality_Composition). See more info on my organizational layout under "Goals" in 08_Seasonal_Biodiversity.
+The goal of this document is to run an analysis on the between-sample (beta) diversity of the samples in my project, similar to the analysis that I ran in 06_Ordination. This is the second of three new analysis documents I will make (I have previously made 08_Seasonal_Biodiversity and will subsequently make 10_Seasonality_Composition). See more info on my organizational layout under "Goals" in 08_Seasonal_Biodiversity.
 
 Unlike in my original 06_Ordination analysis, I do not need to evaluate sequencing depth and normalize read counts, as I have previously done this in my original homework document!
 
-In particular, I'm hoping that this seasonal/sample analysis will explain the weird grouping in my Skimmed Milk Powder samples.
+In particular, I'm hoping that this seasonal/sample analysis will explain the weird clustering I originally saw in my Skimmed Milk Powder samples (they clustered in two separate groups, with one group not overlapping with any other sample type).
+
+# Goals
 
 1. Calculate community **dis**similarities. Numbers between 0 and 1. If 0, completely similar versus if they are 1, then they're completely dissimilar. Here I will split up my communities by sample type *AND* season!!
     a. **Sorensen**: Shared Species as a binary value: Abundance-unweighted 
@@ -134,6 +135,7 @@ save(metadata_df_season,
      file = "data/09_Seasonal_Ordination/metadata_df_season.RData")
 
 ```
+Note that when I originally ran PERMANOVA in 06_Ordination I only used by = margin since I was only testing one variable (sample type). Now that I am looking at season and sample type I will be running by = terms, twice alternating the order of the terms. Then I will run with by = "margin" for marginal p-values, which we can compare to the residuals from the first one. 
 
 ### Sorensen
 
@@ -156,6 +158,9 @@ sorensen_sample_adonis_margin <- adonis2(scaled_sorensen_dist ~ season * environ
 
 sorensen_sample_adonis_margin
 ```
+Okay here we see that about 9.8% of the variation is explained by sample type and 2.3% variation is explained by season. The interaction between sample type and season explain an additional 4.5% of the variation.
+
+Finally, the total residiuals of the model is ~83% of the variation remains unexplained by these variables. We can see that when looking at Sorensen dissimilarity, which jsut considers presence/absence, not a lot of the variation is explained.
 
 ### Bray-Curtis
 
@@ -176,7 +181,11 @@ bray_sample_adonis_margin <- adonis2(scaled_bray_dist ~ season * environment_mat
 
 bray_sample_adonis_margin
 ```
+When looking at Bray Curtis we see that about 15.7% of the variation is explained by sample type and 4.1% variation is explained by season. The interaction between sample type and season explain an additional 8.9% of the variation.
 
+Finally, the total residuals of the model is ~72% of the variation remains unexplained by these variables. We can see that when looking at Sorensen dissimilarity, which just considers presence/absence, not a lot of the variation is explained.
+
+In comparison to Sorensen, when we jsut looked at presence/absence, when we consider relative abundance with Bray-Curtis another 11% of variation is explained.
 
 ### Unweighted-Unifrac
 
@@ -196,7 +205,9 @@ uUnifrac_sample_adonis_margin <- adonis2(scaled_uUnifrac_dist ~ season * environ
 
 uUnifrac_sample_adonis_margin
 ```
+With unweighted Unifrac we see that about 13.7% of the variation is explained by sample type and about 2.5% variation is explained by season. The interaction between sample type and season explain an additional 4.7% of the variation.
 
+Finally, the total residiuals of the model is ~79% of the variation remains unexplained by these variables. We can see that when looking at Sorensen dissimilarity, which jsut considers presence/absence, not a lot of the variation is explained.
 
 ### Weighted-Unifrac
 
@@ -216,6 +227,9 @@ wUnifrac_sample_adonis_margin <- adonis2(scaled_wUnifrac_dist ~ season * environ
 
 wUnifrac_sample_adonis_margin
 ```
+With WEIGHTED Unifrac we see that about 26.7% of the variation is explained by sample type and about 5% variation is explained by season. The interaction between sample type and season explain an additional 13.7% of the variation.
+
+Finally, the total residiuals of the model is ~55% of the variation remains unexplained by these variables. We can see that when looking at Sorensen dissimilarity, which jsut considers presence/absence, not a lot of the variation is explained.
 
 # Betadisper: Testing Variances/Dispersions
 
@@ -294,8 +308,15 @@ dispr_wUnifrac_season <- betadisper(scaled_wUnifrac_dist, metadata_df_season$sea
 permutest(dispr_wUnifrac_season)
 
 ```
+In my dispersion analysis, my Bray Curtis, Sorensen, weighted Unifrac and unweigthed Unifrac results are all in agreement. Using both of these metrics, sample type has a significant betadisper()/permutest() result (p < 0.05).
+
+
+Since my PERMANOVA is significant and my betadisper()/permutest() is significant, it suggests that my groups differ in community composition (as determined by PERMANOVA) but ALSO that they may differ in dispersion (as determined by betadisper()/permutest()). This difference in dispersion can influence the PERMANOVA result; it introduces the possibility that the PERMANOVA significance is partly driven by the differences in group variability and not just compositional shifts between the groups.
+
 
 # 6. Visualize Community Dissimilarity with Ordination
+
+I will provide analysis after I have plotted both PCoA and NMDS plots for all four metrics (Sorensen, Bray-Curtis, weighted Unifrac and unweighted unifrac).
 
 ## PCoA: Principal Coordinates Analysis
 
@@ -440,7 +461,7 @@ wunifrac_pcoa_plot
 
 ```
 
-Now show all the PCoA plot together!
+Now show all the PCoA plots together!
 
 ```{r combine-pcoa}
 
@@ -481,6 +502,8 @@ sorensen_nmds_plot
 
 ```
 
+The stress value for Sorensen NMDS was "stress = 0.1762861". This stress value wasn’t less than 0.1, it was still in the normally acceptable range being less than 0.2.
+
 ### Bray-Curtis
 
 ```{r nmds-bray, fig.height=3.5, fig.width=7}
@@ -507,6 +530,8 @@ bray_nmds_plot <-
 bray_nmds_plot
 
 ```
+The stress value for Bray-Curtis NMDS was "stress = 0.1695472". This stress value wasn’t less than 0.1, it was still in the normally acceptable range being less than 0.2.
+
 
 ### Unweighted-Unifrac
 
@@ -535,6 +560,8 @@ uwunifrac_nmds_plot
 
 ```
 
+The stress value for Bray-Curtis NMDS was "stress = 0.1069396". This stress value was just over the 0.1 mark! This was the "best" stress value I got from all of the metrics!
+
 ### Weighted-Unifrac
 
 ```{r nmds-weighted-unifrac, fig.height=3.5, fig.width=7}
@@ -561,6 +588,9 @@ wunifrac_nmds_plot <-
 wunifrac_nmds_plot
 
 ```
+0.1404723 
+
+The stress value for Bray-Curtis NMDS was "stress = 0.1404723". This stress value wasn’t less than 0.1, it was still in the normally acceptable range being less than 0.2.
 
 Now combine all the NMDS plots together!
 
@@ -571,12 +601,26 @@ sorensen_nmds_plot + bray_nmds_plot + uwunifrac_nmds_plot + wunifrac_nmds_plot +
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "A")
 
-# Show the plots 
+# Show the plots for my presentation
 wunifrac_pcoa_plot + wunifrac_nmds_plot +
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "A")
 
 ```
+# Final thoughts and analysis
+
+WOW! SEASON DOES EXPLAIN THE DISTINCT CLUSTERING WITHIN THE SKIMMED MILK POWDER SAMPLES!
+
+The main thing I wanted to see when looking at these new ordinations was if season (represented by shape) would explain the distinct clustering of two groups within the Skimmed Milk Powder samples (and to a lesser extent the Skimmed Milk Silo samples). And we can see that it does!!
+
+
+Just as a reminder, when I first looked at beta diversity and made the 8 PCoA and NMDS plots I only used dairy sample type as a variable, and I was so confused because I was consistently seeing distinct separate clustering in my skim milk powder samples (yellow here), and to a lesser extent my skim milk silo samples (in light green here).
+
+We talked a lot this semester about doing intuition/gut checks, and felt like something was missing when I initially made these ordinations. I'm so glad I went back and redid parts of my analysis to include seasonality, because it turns out sample type and lactation stage both significantly influence differences between the microbiota of the dairy samples.
+
+Here we can see the skim milk powder samples clustering separately based on season, with the mid-lactation samples essentially having zero overlap with all of the other groups in my other ordination plots
+
+These ordinations ended up being important for guiding my analyses moving forward (in 10_Seasonal_Composition). I shifted my analysis to try and figure out what was driving such distinct clustering in my skim milk powder samples!
 
 # Final info for Reproducibility 
 
