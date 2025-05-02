@@ -13,11 +13,14 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
                       fig.path = "../figures/08_Seasonality_Biodiversity/")
 ```
 
-#Goals
+# Goals
 
 The goal of this document is to run an analysis on the within-sample biodiversity of the samples in my project, similar to the analysis that I ran in 05_Biodiversity. This is the first of three new analysis documents I will make (I will subsequently make 09_Seasonality_Ordination and 10_Seasonality_Composition). 
 
+**With these three additional documents I want to determine if season can explain the weird distinct clustering I was seeing within Skim Milk Powder samples in my ordinations, as well the bimodal distribution in my relative abundance taxa plots! I hope to be able to explore what is driving these differences!**
+
 When I initially completed my homework assignments, I ran my biodiversity, ordination and composition analysis without splitting my data up between mid-lactation and late-lactation samples (sample seasonality). This was a great starting point, but for my presentation and to wrap up this project, I really wanted to run additional analysis where I also consider the "seasonality" of my samples to mimic the analysis done in the paper where this data is originally from [@mchughTrackingDairyMicrobiota2020]. Just slipped that in there to practice making citations and bibliographies in RMarkdown :)
+
 
 I thought that making separate analysis documents was probably the best way to maintain organization within my project, while providing me with a little piece of mind I would not mess up the analysis I did in my original homework documents. It's super cool that I have the skills to do this - hopefully my organization and reproducibility continue to improve while I work on these documents!
 
@@ -26,7 +29,9 @@ In this document I do not need to calculate Hill Numbers or evaluate the rarefac
 1. Analyze the Hill numbers as it relates to sample type across processing pipeline and seasonality.
 2. Test and answer additional scientific questions focused on seasonality and sample type!
 
-#Inputs
+One last thing I want to note is that these three new documents focused on seasonality are primarily just for exploratory analysis, I likely will not comment/complete analysis, intro/conclusion on all of the plots/work I do! Just wanted to fit them in as a little bonus analysis.
+
+# Inputs
 
 1. We will need the `midpoint_rooted_physeq_cut`, the midpoint rooted tree that we initially created in `analysis/04B_Phylogenetic_Tree_Inspection.Rmd`, but was edited in my original homework document `analysis/05_Biodiversity.Rmd`.  We will also need to load in some other objects from that original document since we are skipping straight to our diversity analyses (see the load data chunk).
 
@@ -41,7 +46,6 @@ In this document I do not need to calculate Hill Numbers or evaluate the rarefac
 # Set up the environment
 
 ## Timing of this script
-
 
 
 ```{r rmd-start}
@@ -84,7 +88,7 @@ source("code/colors.R")
 ```
 
 
-#Diversity by Sample Type 
+# Diversity by Sample Type 
 
 ## Determing mid-lactation and late-lactation
 
@@ -179,7 +183,7 @@ obs_div_df_cut %>%
 
 ```
 
-#Statistically Test Richness
+# Statistically Test Richness
 
 ```{r sample-diversity-richness, fig.height=4, fig.width=4}
 
@@ -187,7 +191,7 @@ obs_div_df_cut %>%
 
 #This mimics the setup of Fig 2A in my paper
 
-#Right now, would need to use not normal test 
+#We need to use not normal test
 
 # Pull out richness data 
 obs_rich_df_cut <- 
@@ -209,9 +213,10 @@ richness_no_cream <- obs_rich_df_cut %>%
 
 
 #Perform Wilcoxon Rank-Sum test: richness between seasons, separately for each sample type
+
 wilcox_season_richness <- richness_no_cream %>%
   group_by(environment_material) %>%
-  wilcox_test(qD ~ season)
+  rstatix::wilcox_test(qD ~ season)
 
 
 # Look at it 
@@ -227,7 +232,7 @@ Also note that when I was statistically testing for richness in my original 05_B
 From the results of the Wilcoxon test, the only sample type with a significant difference in richness between mid- and late-lactation samples was Skimmed Milk Powder samples (had p-value < 0.05).
 
 
-#Statistically Test Shannon Diversity
+# Statistically Test Shannon Diversity
 
 ```{r sample-diversity-shannon, fig.height=4, fig.width=4}
 
@@ -271,7 +276,7 @@ wilcox_season_shannon
 From the results of the Wilcoxon test, Skimmed Milk Powder samples and Bulk Tank Milk samples had a significant difference in shannon diversity between mid and late-lactation samples  (had p-value < 0.05).
 
 
-#Statistically Test Simpson Diversity
+# Statistically Test Simpson Diversity
 
 ```{r sample-diversity-simpson, fig.height=4, fig.width=4}
 
@@ -313,61 +318,26 @@ wilcox_season_simpson
 Like the Shannon diversity test, the results of the Wilcoxon test, Skimmed Milk Powder samples and Bulk Tank Milk samples had a significant difference in Simpson diversity between mid and late-lactation samples  (had p-value < 0.05).
 
 
-Below I will make a plot with my Wilcoxon richness test results added for richness, shannon and simpson diversity.
-
-```{r alpha-div-stat-plot}
+Below I originally tried to make a plot with my Wilcoxon richness test results added for richness, shannon and simpson diversity. Tried a few different things, but then decided to move onto other analysis, as I already had the stats results and just wanted to make a pretty visualization. I deleted my code because it didn't work, but can see my past code attempts with my commit history in my Rmd.
 
 
-# Add significance stars to your plot
+# Final Thoughts
 
-obs_div_df_cut %>%
-  ggplot(aes(x = env_season, y = qD, fill = environment_material, color = environment_material)) + 
-  facet_wrap(.~Order.q, scales = "free_y") + 
-  geom_jitter() + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
-  scale_color_manual(values = environment_colors) + 
-  scale_fill_manual(values = environment_colors) + 
-  labs(y = "Effective Number of ASVs") + 
-  theme_bw() + 
-  theme(legend.position = "bottom",
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+It was really neat that I was able to investigate and determine significant differences in three different alpha diversity measures between the two seasons, mid-lactation and late-lactation, for all of my sample types. This analysis built on the original document 05_Biodiversity where I looked at the differences in richness, Shannon Diversity and Simpson diversity between sample types.
 
-#add stars to plot cannot figure out
+As a reminder, my primary scientific question was: How does the microbial diversity of dairy samples change throughout the skim milk powder manufacturing process?
 
-# Set the order for env_season
-obs_div_df_cut$env_season <- factor(
-  obs_div_df_cut$env_season,
-  levels = c(
-    "Bulk Tank Milk - mid-lactation", "Bulk Tank Milk - late-lactation",
-    "Collection Tanker Milk - mid-lactation", "Collection Tanker Milk - late-lactation",
-    "Whole Milk Silo - mid-lactation", "Whole Milk Silo - late-lactation",
-    "Cream Silo - mid-lactation", "Cream Silo - late-lactation",
-    "Skimmed Milk Silo - mid-lactation", "Skimmed Milk Silo - late-lactation",
-    "Skimmed Milk Powder - mid-lactation", "Skimmed Milk Powder - late-lactation"
-  )
-)
+And I had the following hypotheses:
 
-# Now plot it!
-obs_div_df_cut %>%
-  filter(Order.q %in% c(0, 2)) %>%
-  ggplot(aes(x = env_season, y = qD, fill = environment_material, color = environment_material)) + 
-  facet_wrap(.~Order.q, scales = "free_y") + 
-  geom_jitter(width = 0.2) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
-  scale_color_manual(values = environment_colors) + 
-  scale_fill_manual(values = environment_colors) + 
-  labs(y = "Effective Number of ASVs") + 
-  theme_bw() + 
-  theme(
-    legend.position = "bottom",
-    axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)
-  )
+- *Null Hypothesis:* Microbial alpha diversity (*e.g.* richness and Simpson diversity) does not vary as the raw milk is processed (as it goes from farm bulk tank milk to its final form of skim milk powder).
 
 
+- *Alternative Hypothesis:* Microbial alpha diversity (*e.g.* richness and Simpson diversity) decreases as the raw milk is processed to become skim milk powder.
 
-```
+
+In my original ordinations (my PCoA and NMDS plots) I saw this weird distinct clustering of two groups within the SKimmed Milk Powder samples (as well as the Skimmed Milk Silo samples, although not as extreme). My hunch is that season will explain this odd clustering. By looking at these alpha diversity results, we can see that there are significant differences between the seasonal Skim Milk Powder samples. So it will be interesting when we look at microbial composition (using relative abundance of taxa) if we will see differences in seasonal Skim Milk Powder samples there. 
+
+If we see that season does seem to explain the weird clustering, the alpha diversity results we see here and potentially the composition results could help me reveal why we keep seeing these clustering patterns. I want to figure out what is driving this separation between Skimmed Milk Powder samples!!
 
 # Final info for Reproducibility 
 
