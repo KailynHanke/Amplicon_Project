@@ -26,10 +26,10 @@ This folder includes necessary analysis (and their associated rendered html) fil
 - 07_Composition.Rmd: In this document I carried out a microbial compositional analysis of dairy samples across a skim milk processing pipeline. To do this I calculated th relative abundances of taxonomic groups at various levels (phylum, genus, ASVs) and then made some nice visualizations of how the microbial taxa vary across the dairy sample types.
 
 
-- 08_Seasonality_Biodiversity.Rmd: The goal of this document is to run an analysis on the within-sample biodiversity of the samples in my project, similar to the analysis that I ran in 05_Biodiversity. But, this time, separating the diary samples up not just by sample type, but by season too.
+- 08_Seasonality_Biodiversity.Rmd: The goal of this document is to run an analysis on the within-sample biodiversity of the samples in my project, similar to the analysis that I ran in 05_Biodiversity. But, this time, separating the dairy samples up not just by sample type, but by season too.
 
 
-- 09_Seasonal_Ordination.Rmd: The goal of this document is to run an analysis on the between-sample (beta) diversity of the samples in my project, similar to the analysis that I ran in 06_Ordination. But, this time, separating the diary samples up not just by sample type, but by season too.
+- 09_Seasonal_Ordination.Rmd: The goal of this document is to run an analysis on the between-sample (beta) diversity of the samples in my project, similar to the analysis that I ran in 06_Ordination. But, this time, separating the dairy samples up not just by sample type, but by season too.
 
 
-- 10_Seasonal_Composition.Rmd: The goal of this document is to run an analysis of microbial composition of mid- and late-lactation dairy samples across a processing pipeline, similar to the analysis that I ran in 07_Composition. But, this time, separating the diary samples up not just by sample type, but by season too.
+- 10_Seasonal_Composition.Rmd: The goal of this document is to run an analysis of microbial composition of mid- and late-lactation dairy samples across a processing pipeline, similar to the analysis that I ran in 07_Composition. But, this time, separating the dairy samples up not just by sample type, but by season too.

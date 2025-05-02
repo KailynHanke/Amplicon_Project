@@ -12,6 +12,9 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.path = "../figures/06_Ordination/")
 ```
 
+In this document I evaluated sequencing depth and normalized the read counts between samples. I then calculated community dissimilarities and ran statistics with PERMANOVA and betadispR before visualizing the community data with ordinations (PCoA and NMDS plots).
+    
+
 # Goals 
 
 1. Load in phyloseq data with rooted tree & colors and functions.  
@@ -44,17 +47,20 @@ knitr::opts_chunk$set(echo = TRUE,
 
 INTERPRETATION #1:  What is your scientific question and hypotheses? Do they relate to abundance? Presence/absence? Phylogeny?
 
+Primary Scientific Question: How does the microbial diversity of dairy samples change throughout the skim milk powder manufacturing process?
 
-Scientific Question: How is microbial biodiversity modified as milk is processed in the dairy supply chain?
-
-- *Null Hypothesis:* Microbial biodiversity (*e.g.* Sorensen) does not vary as the milk is processed (as it goes from farm bulk tank milk to its final form of skim milk powder).
+- *Null Hypothesis:* Microbial biodiversity (*e.g.* Sorensen and Bray Curtis) does not vary as the milk is processed (as it goes from farm bulk tank milk to its final form of skim milk powder).
 
 - *Alternative Hypothesis #1:* Microbial composition (*e.g.* Sorensen) will become more dissimilar as the dairy samples move further along the supply chain. There is an inverse relationship between richness and how processed the dairy samples are.
 
-- *Alternative #2 Hypothesis*: Dominant members of the microbial community (*e.g.* Bray-Curtis) are unique in Bulk Tank samples (least processed) compared to Skimmed Milk Powder samples (most processed). 
+Note: I came up with alternative hypothesis #2 because I could see there being bif differences in the presence/absence of certain bacteria on either end of the processing pipeline due to the various steps and conditions that are involved in the manufacturing process. I thought that we would probably lose a lot of specific types of bacteria that might not be able to handle heat (pasteurization) or dry environments like within Skim Milk Powder samples.
 
+- *Alternative #2 Hypothesis*: Dominant members of the microbial community (*e.g.* Bray-Curtis) are unique in Skimmed Milk Powder samples (most processed) compared to Bulk Tank Milk samples (least) processed). 
 
-I would like my null hypothesis and alternative hypothesis #1 to relate to presence absence, while I would like my alternative hypothesis #2 to relate more to abundance (focuses on dominant species). 
+Note: I came up with alternative hypothesis #2 because I thought that certain processes in the pipeline like pasteurization may eliminate a large number of bacteria, and enrich for specific bacteria, majorly shifting the dominant bacteria in these samples.
+
+I would like my null hypothesis and alternative hypothesis #1 to relate to presence absence, while I would like my alternative hypothesis #2 to relate more to abundance (focusing on dominant species). 
+
 
 # Set up 
 
@@ -88,6 +94,8 @@ source("code/functions.R")
 ```
 
 # 1. Load in the data 
+
+Kept in the code below used to troubleshoot loading in data in case it happens again and I need something to refer back to!
 
 ```{r load-data}
 
@@ -143,8 +151,7 @@ head(sample_depths_sorted, 50)
 #ERR3141489 ERR3141489 17924
 #ERR3141496 ERR3141496 18811
 
-#Ask: Cut bottom 3?
-#Did not do the "remove the outlier step" that Mar did to remove  `20210615-MA-ABB2F`
+#This addressed in the next part of this document^... I struggled to decide what my sample depth cutoff should be.
 
 ```
 
@@ -360,7 +367,7 @@ Yes, the total number of sequences across all of my samples are in the same gene
 
 # 4. Calculating dissimilarity
 
-Now, let's make distance objects of the dissimiliarity measures we used in class! 
+Now, let's make distance objects of the dissimilarity measures we used in class! 
 
 ```{r calc-dissimilarity}
 # Sorensen Dissimiliarty
@@ -383,7 +390,7 @@ scaled_wUnifrac_dist <- phyloseq::distance(scaled_physeq, method = "wunifrac")
 
 INTERPRETATION #4:  Which dissimilarity metric is most related to your scientific question? Why or why not?
 
-My broad scientific question is very general: How is microbial biodiversity modified as milk is processed in the dairy supply chain?
+My broad scientific question is very general: How does the microbial diversity of dairy samples change throughout the skim milk powder manufacturing process?
 
 Because of this, it could be related to any of the dissimilarity metrics we've discussed. But with the way I've framed my null hypothesis and alternative hypothesis #1, I want to first focus on looking how my samples differ in presence/absence of species. So I would like to focus my analysis first on using Sorensen (Sorensen over Jaccard because I want to give greater weight to shared species). In my initial analysis I really just want to focus on who's there!! Then, I would like to incorporate abundance data and use Bray-Curtis when assessing alternative hypothesis #2!
 
@@ -392,6 +399,8 @@ Because of this, it could be related to any of the dissimilarity metrics we've d
 # 5a. PERMANOVA: Testing Means/Centroids
 
 Here, we will focus on comparing the Sorensen and the Bray-Curtis. 
+
+**PLEASE NOTE**: in this document I do not take season into account at all. Please see my series of three additional analysis documents where I do look at season as a variable. I am adding this note in after I initially completed this analysis and was very confused by the results I saw in my ordinations, specifically the distinct, separate clustering within Skim Milk Powder samples and Skim Milk Silo samples that I could not explain. I then went back and read my paper again and realized that season was probably a pretty important variable to consider in my analysis... #GutCheck! 
 
 ### Sorensen
 
@@ -422,14 +431,30 @@ braycurtis_sample_result
 INTERPRETATION #5: Using the above example to guide you, run the appropriate PERMANOVA for your scientific question and interpret the results. What biological conclusion can you draw from your PERMANOVA results?
 
 
-Both Sorensen and Bray-Curtis distance matrices showed significant results (p = 0.001). Using Sorensen, 9.8% of the variation in microbial community composition can be explained by sample type and using Bray Curtis, 15.7% of the variation in community composition can be explained by sample type, which corresponds to how far along the milk was in the dairy supply chain (going from bulk tank milk to skimmed milk powder). The F-statistic tells us how strongly a variable separates groups, relative to residuals. The F statistics were 3.89 for Sorensen and 6.66 for Bray-Curtis. 
+Both Sorensen and Bray-Curtis distance matrices showed significant results (p = 0.001). Using Sorensen, 9.8% of the variation in microbial community composition can be explained by sample type and using Bray Curtis, 15.7% of the variation in community composition can be explained by sample type. The F-statistic tells us how strongly a variable separates groups, relative to residuals. The F statistics were 3.89 for Sorensen and 6.66 for Bray-Curtis. 
 
-From these results, I understood that there is significant differences in the microbial communities depending on how far along the milk is in its processing pipeline. While these F-statistic results aren't as high as the ones we saw in the class analysis, I still think that these values show that there are is more meaningful separation of the samples by sample in Bray-Curtis when abundance is considered, versus in Sorensen when you're really only looking at presence-absence.
+From these results, I understood that there is significant differences in the microbial communities depending on how far along the milk is in its processing pipeline (it's sample type). While these F-statistic results aren't as high as the ones we saw in the class analysis, I still think that these values show that there are is more meaningful separation of the samples by sample in Bray-Curtis when abundance is considered, versus in Sorensen when you're really only looking at presence-absence.
 
 Since Bray-Curtis explained slightly more variation than Sorensen, I interpreted this to mean that not only are there different taxa present in the communities, as determined by using Sorensen, but that the relative abundances of these taxa further contribute to the differences we are seeing in microbial compositions between the sample groups.
 
 
 # 5b. Betadisper: Testing Variances/Dispersions
+
+Some background (from Mar's analysis):
+
+`betadisper()` is an important companion to PERMANOVA when analyzing beta diversity in microbial ecology. It checks a key assumption of PERMANOVA: homogeneity of group dispersions (variances). **If this assumption is violated, the PERMANOVA results might be driven by differences in spread rather than true differences in community composition.**
+
+**In Summary:**
+
+| Function       | What it does                                                  | Significance test? | Output includes                    |
+|----------------|---------------------------------------------------------------|---------------------|------------------------------------|
+| `betadisper()` | Computes within-group distances to centroids (dispersion)     | ❌ No                | Distances, centroids, model object |
+| `permutest()`  | Tests if group dispersions differ using permutations          | ✅ Yes               | F-value, permutation-based p-value |
+
+**Always run `betadisper()` and `permutest()` after PERMANOVA** to test whether the groups have similar within-group variation.
+
+- If p > 0.05 (not significant), the PERMANOVA result is reliable.
+- If p < 0.05 (significant), be cautious—group differences may be due to dispersion, not composition! However, not all is lost as we may expect this to be biologically true.
 
 ## Sorensen
 
@@ -457,9 +482,9 @@ permutest(dispr_bray_sample_type)
 
 INTERPRETATION #6: Using the above example to guide you, run the appropriate betadisper() and permutest() for your scientific question and interpret the results. What biological conclusion can you draw from your dispersion analysis?
 
-In my dispersion analysis, my Bray Curtis results are in complete agreement with the Sorensen results. Using both of these metrics, sample type has a significant betadisper()/permutest() result (p < 0.05). This means that group differences may be due to dispersion, not composition. This indicates that sample type likely has some biological difference in the variance, which means that we need to be careful in our PERMANOVA interpretations. 
+In my dispersion analysis, my Bray Curtis results are in agreement with the Sorensen results. Using both of these metrics, sample type has a significant betadisper()/permutest() result (p < 0.05). This means that group differences may be due to dispersion, not composition. This indicates that sample type likely has some biological difference in the variance, which means that we need to be careful in our PERMANOVA interpretations. 
 
-For example, sample types earlier in the processing pipeline, like bulk tank milk, could have higher dispersion due to having a wider range of microbial communities, while sample types later in the processing pipeline, like skimmed milk powder samples, could select for a few specific microbes and have lower dispersion. It is possible these significant betadisper()/permutest() results could just be reflecting biological reality.
+For example, sample types earlier in the processing pipeline, like bulk tank milk, could have higher dispersion due to having a wider range of microbial communities, while sample types later in the processing pipeline, like skimmed milk powder samples, could select for a few specific microbes and have lower dispersion. So it is possible these significant betadisper()/permutest() results could just be reflecting biological reality.
 
 
 
@@ -525,16 +550,18 @@ sorensen_pcoa_plot + bray_pcoa_plot +
 
 INTERPRETATION #8: Plot your data using a PCoA. Interpret what you can conclude from the PCoA.
 
-Here you can see that sample type (environment_material) is the dominant factor structuring the microbial communities. In the Bray-Curtis PCoA more variation is explained (~13.5%) than Sorensen (~9.2%). Although this is a small difference (we gain ~4% variation explained), it suggests that abundance differences matter when comparing the compositional differences in these samples.
+In the Bray-Curtis PCoA more variation is explained (~13.5%) than Sorensen (~9.2%). Although this is a small difference (we gain ~4% variation explained), it suggests that abundance differences matter when comparing the compositional differences in these samples.
 
 
-There were also a few key clustering features I wanted to mention. In the Sorensen PCoA we can see distinct clustering of the skimmed milk powder samples (into two separte clusters). This is really interesting, and I am excited to further explore if this is primarily driven by have much fewer taxa, or by having distinct set of rare taxa. 
+There were also a few key clustering features I wanted to mention. In the Sorensen PCoA we can see distinct clustering of the skimmed milk powder samples, skimmed milk silo samples and whole milk silo samples (into two separte clusters). 
 
 
-In the Bray Curtis PCoA, the clustering between sample type is a lot tighter. Here, you can see clear clustering of the skimmed milk powder samples into two groups, with one of the groups being completely isolated. I am also excited to explore these results further using relative abundance data.
+In the Bray Curtis PCoA, the clustering between sample type is a lot tighter. Here, you can see clear clustering of the skimmed milk powder samples into two groups, with one of the groups being completely isolated. 
+
+This is really interesting, but I am quite confused what could cause such distinct clustering patterns within the same sample type. I want to further explore what is driving this pattern we are seeing... is this primarily driven by have much fewer taxa, or by having distinct set of rare tax? I am going to go back to my paper and read about sample collection strategy.
 
 
-It is also interesting that with the clustering in this plot you can see a transition from bulk tank milk samples to collection tanker milk, to skimmed/whole milk silo samples to skimmed milk powder samples (albeit with major overlapping between the sample types) along axis 2. This was super cool to see, as this reflects the order of samples in the dairy processing pipeline. 
+It is also interesting that with the clustering in the Bray-Curtis PCoA plot you can sort of see a transition from bulk tank milk samples to collection tanker milk, to skimmed/whole milk silo samples to skimmed milk powder samples (albeit with major overlapping between the sample types) along axis 2. This was super cool to see, as this reflects the order of samples in the dairy processing pipeline. 
 
 Something that I do want to note about this, or that I have questions about, is that since the majority of this gradual sort of separation does not occur across axis 1 representing sample type, I do not know the metadata variable that explains this variation.
 
@@ -587,7 +614,7 @@ Firstly, I want to mention that my stress values for both my Sorensen and Bray-C
 
 The clustering in my Sorensen and Bray-Curtis NMDS plots were quite similar, although the clustering in the bulk tank samples was a bit tighter in my Bray-Curtis NMDS and the clustering of skimmed milk powder samples was tighter in Sorensen. 
 
-The centroid of the bulk tank milk and collection tanker milk looked like they almost overlapped in both plots, while there was a more distinct grouping of skimmed milk powder samples. It was also interesting to see that in the NMDS plot all of the skim milk samples grouped together, while in the PCoA plots the skimmed milk powder samples grouped into two distinct clusters. 
+The centroid of the bulk tank milk and collection tanker milk looked like they almost overlapped in both plots, while there was a more distinct grouping of skimmed milk powder samples. It was also interesting to see that in the Sorensen NMDS plot all of the skim milk powder samples grouped together, while in the other ordination plots we can see two separate groups (although less distinct separation than we saw in the PCoA plots).
 
 In both Sorensen and Bray-Curtis NMDS plots, from left to right you can sort of visualize the transition from the most processed to least processed samples like we saw in the Bray-Curtis PCoA, although there is much more overlapping between the clusters.
 
@@ -603,7 +630,9 @@ sorensen_nmds_plot + bray_nmds_plot +
 
 INTERPRETATION #10: Plot both the PCoA and NMDS together. Which of the two visualizations work best for your data? Explain your reasoning.
 
-I think that PCoA worked best for my data. In PCoA, particularly Bray-Curtis PCoA, compared to NMDS, there was more distinct clustering. I think it did a better job of showing how distinct/different the microbial composition of the skimmed milk powder samples were. With Bray-Curtis PCoA the gradual overlapping between the different samples directly reflected the amount of processing these dairy samples had been subjected to which was super cool, although not explained by sample type.
+In total transparency, I am a bit confused on the separate clustering within skim milk powder samples. This is an initial interpretation but I need to go revisit the paper.
+
+I think that PCoA worked best for my data. In PCoA, particularly Bray-Curtis PCoA, compared to NMDS, there was more distinct clustering. I think it did a better job of showing how distinct/different the microbial composition of the skimmed milk powder samples were. With Bray-Curtis PCoA the gradual overlapping between the different samples directly reflected the amount of processing these dairy samples had been subjected to which was super cool.
 
 # Now what? 
 
