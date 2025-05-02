@@ -54,7 +54,7 @@ set.seed(111111)
 ## Load Packages 
 ```{r load-packages}
 # Load in the packages 
-pacman::p_load(tidyverse, devtools, DT, phyloseq, patchwork, rstatix, 
+pacman::p_load(tidyverse, devtools, DT, phyloseq, patchwork, ggpubr, rstatix, 
                install = FALSE)
 
 # load colors
@@ -727,9 +727,11 @@ Again, super cool stuff - only one ASV, ASV_005, is driving this change in relat
 
 Seeing this sort of reinforces the ideas from our ordination and stacked bar plot that season can be a significant influence, and that the microbial composition differs across skim milk powder samples collected in different seasons.
 
-I blasted ASV_005 and it turns out to be a match for *Thermus thermophilus* (which is a thermophile if you can’t tell by the name haha)!
+I blasted ASV_005 and it turns out to be a match for *Thermus thermophilus* (which is a thermophile if you can’t tell by the name haha)! 
 
-START HERE
+Note that if I had more time to complete this project I would carry out the same analysis I did above with Geobacillus. If you recall, in 07_Composition, we looked at the relative abundance of Geobacillus across the different sample types. Geobacillus was another thermophilic genus where we saw the large increase in relaitve abundance in skim milk powder samples, but there was very evident bimodal distribution. 
+
+Below I have plotted the Bacteroidota ASVs, similar to how I've done above. Out of curiousity (and to compare ot my initial analysis where I did not look at season), I also identified and plotted the 10 most abundant ASVs by season, although I didn't really take my analysis any further.
 
 ### Bacteroidota ASVs
 
@@ -873,6 +875,15 @@ ASV_df_season %>%
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 ```
+# Final Project Reflections
+
+It is really cool to see how far I've come over the course of the semester. I think by looking at my first analysis documents to my later ones, you can tell that I have gotten better at writing analysis, including notes in my code, and organizing/structuring my analysis documents. I've also gotten so much more comfortable using R.
+
+Although I've made great progress, I didn't get as far as I'd like to have gotten on this project. If I had more time I would like to investigate more thermophilic genera and compare their relative abundances in Skim Milk Powder samples (so I can accept/reject the hypothesis I made in this document about Skim Milk Powder samples being enriched for thermophilic bacteria). I would have liked to add stats to a lot more of my plots/results.
+
+I also would have loved to explore how Cronobacter shows up in these dairy sample microbial communities. The reason I originally chose this paper is because I started a project during my Wiedmann Lab rotation that focused on looking at environmental prevalence of Cronobacter. Cronobacter is Gram negative bacteria that often creates fatal/severe infections in infants. It also has the unique ability to survive in powdered infant formula. So, if not eradicated in the processing pipeline, or contaminated in this processing pipeline, there can be really severe and really heartbreaking consequences. And when I was looking into microbial community studies within milk powder products, the literature was LACKING, and I really wished there was more information.
+
+Anywho, I'm happy with the work I was able to produce - I really enjoyed learning more about the bioninformatic pipeline that makes community analysis possible! Thanks again!
 
 # Final info for Reproducibility 
 

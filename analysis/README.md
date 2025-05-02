@@ -5,7 +5,7 @@ This folder includes necessary analysis (and their associated rendered html) fil
 - 01_QualityTrimming.Rmd: Here I created quality plots to asses pre- and post-quality trimming. I have also created files that include the filtered and trimmed data.
 
 
-- 02_AssignASVs.Rmd: Here I inferred an error model for the filtered sequences, separately on forward and reverse reads. I assigned ASVs on both forward and reverse reads separately by applying the error model, and then merged forward and reverse ASVs into "contiguous ASVs". I did quality trimming of ASV lengths, removed chimeras and assigned taxonomy with the Silva Database.
+- 02_AssignASVs.Rmd: In this document I assigned ASVs on both forward and reverse reads by applying the error model, and then merged forward and reverse ASVs into "contiguous ASVs". I did quality trimming of ASV lengths, removed chimeras and assigned taxonomy with the Silva Database.
 
 
 - 03_PreProcessing.Rmd: I combined my data into a phyloseq object and removed any contmainating ASVs that were chloroplasts or mitochondria. I evaluated (or tried to evaluate) for controls. I also checked for reverse complements and the sequencing depth.
