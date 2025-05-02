@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.path = "../figures/02_AssignASVs/")
 ```
 
+In this analysis document I will be assigning ASVs with DADA2. I will be using data from a 2020 paper titled: "Tracking the Dairy Microbiota from Farm Bulk Tank to Skimmed Milk Powder" (@mchughTrackingDairyMicrobiota2020). I am assigning ASVs to eventaully answer my broad research question: How does microbial diversity change throughout the skim milk powder manufacturing process?
+
 # Goals 
 
 1. Infer an error model for in the filtered sequences, separately on forward and reverse reads.
@@ -721,6 +723,8 @@ Let's save the `track_counts_df`, which can be useful for downstream analyses.
 # And save the track_counts_df a R object, which we will merge with metadata information in the next step of the analysis in nalysis/02_Taxonomic_Assignment. 
 save(track_counts_df, file = "data/01_DADA2/track_read_counts.RData")
 ```
+
+In this document I assigned ASVs on both forward and reverse reads by applying the error model, and then merged forward and reverse ASVs into "contiguous ASVs". I did quality trimming of ASV lengths, removed chimeras and assigned taxonomy with the Silva Database.
 
 # Final info for Reproducibility 
 

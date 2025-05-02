@@ -357,6 +357,13 @@ display: none;
 </div>
 
 
+<p>In this analysis document I will be combining my data into a phyloseq
+object and removing any contaminating ASVs. I will be using data from a
+2020 paper titled: “Tracking the Dairy Microbiota from Farm Bulk Tank to
+Skimmed Milk Powder” (<span class="citation">@mchughTrackingDairyMicrobiota2020</span>). By
+analyzing this data I want to answer the broad research question: How
+does microbial diversity change throughout the skim milk powder
+manufacturing process?</p>
 <div id="goals" class="section level1">
 <h1>Goals</h1>
 <p>First, we will use the <a href="https://joey711.github.io/phyloseq/">phyloseq package</a> to
@@ -945,6 +952,14 @@ next step!</p>
 <pre class="r"><code>save(raw_preprocessed_physeq, file = &quot;data/03_PreProcessing/raw_preprocessed_physeq.RData&quot;)</code></pre>
 </div>
 </div>
+<div id="final-thoughts" class="section level1">
+<h1>Final Thoughts</h1>
+<p>In this document I combined my data into a phyloseq object and
+removed any contaminating ASVs that were chloroplasts or mitochondria. I
+evaluated (or tried to evaluate since there were no controls) for
+controls. I also checked for reverse complements and the sequencing
+depth.</p>
+</div>
 <div id="final-info-for-reproducibility" class="section level1">
 <h1>Final info for Reproducibility</h1>
 <div id="check-render-time" class="section level2">
@@ -952,11 +967,11 @@ next step!</p>
 <pre class="r"><code># Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2025-05-01 23:26:29 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2025-05-02 16:48:33 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 5.852 mins</code></pre>
+<pre><code>## Time difference of 5.839 mins</code></pre>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session Information</h2>
@@ -972,7 +987,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2025-05-01
+##  date     2025-05-02
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────

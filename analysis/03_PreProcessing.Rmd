@@ -14,6 +14,9 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.path = "../figures/03_PreProcessing/")
 ```
 
+In this analysis document I will be combining my data into a phyloseq object and removing any contaminating ASVs. I will be using data from a 2020 paper titled: "Tracking the Dairy Microbiota from Farm Bulk Tank to Skimmed Milk Powder" (@mchughTrackingDairyMicrobiota2020). By analyzing this data I want to answer the broad research question: How does microbial diversity change throughout the skim milk powder manufacturing process?
+
+
 # Goals 
 
 First, we will use the [phyloseq package](https://joey711.github.io/phyloseq/) to combine all of our data objects that we exported from the DADA2 workflow (`asv_table`, `tax_table`, and metadata) and incorporate them into a single [specialized S4 R Data object](https://adv-r.hadley.nz/s4.html), known as a phyloseq object. Then, we will remove any potential contaminants and evaluate the accuracy of our sequencing run. Finally, we will write our our single `raw_preprocessed_physeq` phyloseq data object. 
@@ -385,6 +388,10 @@ Finally, let's save our phyloseq object, which we will use for the next step!
 ```{r save-physeq}
 save(raw_preprocessed_physeq, file = "data/03_PreProcessing/raw_preprocessed_physeq.RData")
 ```
+
+# Final Thoughts
+
+In this document I combined my data into a phyloseq object and removed any contaminating ASVs that were chloroplasts or mitochondria. I evaluated (or tried to evaluate since there were no controls) for controls. I also checked for reverse complements and the sequencing depth.
 
 # Final info for Reproducibility 
 
