@@ -664,7 +664,7 @@ genus_df %>%
   nrow()
 
 ```
-Okay a few quick notes here! I struggled so much to get this plot together, and I think it was because there were way to many genera to be displayed on one plot (it looked like a mess of random numbers when I plotted it). So, I then went and selected the 10 genera with the highest relative abundance. I also was curious to see how many Bacteroidota genera were there, and I found out there were 195! Wow!
+Okay a few quick notes here! I struggled so much to get this plot together, and I think it was because there were way too many genera to be displayed on one plot (it looked like a mess of random numbers when I plotted it). So, I then went and selected the 10 genera with the highest relative abundance. I also was curious to see how many Bacteroidota genera were there, and I found out there were 195! Wow!
 
 
 
