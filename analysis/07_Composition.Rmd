@@ -12,6 +12,19 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
                       fig.path = "../figures/07_Composition/")
 ```
 
+
+In this document I carried out a microbial compositional analysis of dairy samples across a skim milk processing pipeline. To do this I calculated th relative abundances of taxonomic groups at various levels (phylum, genus, ASVs) and then made some nice visualizations of how the microbial taxa vary across the dairy sample types.
+
+Throughout this project the main scientific question I have been trying to ask is: How does microbial diversity change throughout the skim milk manufacturing process?
+
+In this document, I would like to explore two main hypotheses related to my overarching scientific question:
+
+1. Refrigerated storage (pre-pasteurization) will result in an increased relative abundance of psychrotrophic spoilage-associated bacteria. After pasteurization, these psychrotrophic bacteria will diminish.
+
+2. Skim milk powder will be enriched with thermophilic genera.
+
+
+
 #Goals 
 
 1. Load in scaled/normalized phyloseq object. 
@@ -33,7 +46,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
 
 # Compositional Data 
 
-Microbial abundance data—like 16S rRNA gene or metagenomics data—are typically **compositional:** they represent relative abundances constrained to a constant total (*e.g.,* percent or proportions). This introduces spurious correlations and other issues if analyzed with traditional statistics. This is a very important limitation to microbial data! 
+Microbial abundance data—like 16S rRNA gene or metagenomics data—are typically **compositional:** they represent relative abundances constrained to a constant total (*e.g.,* percent or proportions). This introduces spurious correlations and other issues if analyzed with traditional statistics. This is a very important limitation to microbial data!
 
 
 INTERPRETATION #1: What are the limitations of interpreting microbial abundance from relative (aka. compositional) rather than absolute counts?
@@ -146,7 +159,7 @@ top10_phyla %in% names(phylum_colors)
 #Note that here I had to add in specific colours into phylum_colors for the phyla that weren't specified in order to get the phyla to show up on my bar plot
 
 # Create a plot
-#Used this plot to sort out my phylum colours, make sure all the data is actually ebing seen/represented 
+#Used this plot to sort out my phylum colours, make sure all the data is actually being seen/represented 
 phylum_df %>%
   filter(Phylum %in% top10_phyla) %>%
   group_by(environment_material, Phylum) %>%
@@ -181,7 +194,9 @@ stacked_plot
 
 ```
 
-Woah Nelly!! This is a crazy plot, but was expected because I have so many samples. We really aren't able to get a good sense of what's going on, so I think in the next plot I am going to try and plot only the May samples and a separate plot with only the October samples.
+Woah Nelly!! This is a crazy plot, but was expected because I have so many samples. To get a better sense of what's going on I think in the next plot I am going to try and plot only the May samples and a separate plot with only the October samples.
+
+One thing is really evident is that it looks like there is two really different compositions in term of relative abundance in the skimmed milk powder plots.
 
 ```{r stacked-bar-May-October, fig.width=9, fig.height=3.5}
 
@@ -220,8 +235,12 @@ phylum_df %>%
         strip.text = element_text(face = "bold"),
         panel.spacing.x = unit(0.5, "lines"))
 
+
+
+
+
 ```
-Success!
+Success for May sample plot! For some reason only Bulk Tank Milk samples were plotted in October. If I have enough time I will come back and fix, but since I have already plotted a Top 10 Phyla plot I will continue on with my analysis for now.
 
 ## Faceted Bar plot 
 
@@ -260,13 +279,14 @@ Some specific results:
 Remember that there is only one Cream Silo sample, so I am not weighting the results of this sample type to heavily.
 - **Bacteroidota** exhibited a pronounced decrease in abundance from the least processed samples, Bulk Tank Milk samples, to the most processed samples, Skimmed Milk Powder samples, although there was a distinct dip in relative abundance of Whole Milk Silo and Cream Silos, that was unique to this phyla.
 - **Deinococcota** exhibited some of the most interesting results! This was the only phyla we looked at where there was much higher relative abundance in the Skimmed Milk Powder samples compared to the other sample types that were tested. I definitely want to look further into these results.
+- One thing of note is that in the phyla mentioned above with an increase in relative abundance in the skim milk powder samples (**Actinomycetota**, **Bacillota**, **Deinococcota**, **Pseudomonadota**) there is a bimodal distribution.
 
 The difference in relative abundance of these phyla between Whole Milk Silo samples and Skim Milk Silo samples got me thinking about what might cause these differences we are seeing. Could certain bacteria be associated with fat molecules in the milk? Similar to particle associated bacteria vs. free-living bacteria in water? This is something that wasn't discussed in the paper but I just had a curious thought about! This might be hard to look at though, especially if there are fewer phyla in Skimmed Milk Powder samples, which could sort of give misleading results in a direct comparison.
 
 Also I would be curious to look at the similarities between phyla that follow similar relative abundance patterns between sample types.
 
 
-After initial exploration, we focus on specific phyla that appear to vary across sample type. I would like to follow up with these phyla:
+After initial exploration, we focus on specific phyla that appear to vary across sample type. I would like to follow up with these phyla that looked particularly interesting:
 
 - Deinococcota
 - Bacteroidota
@@ -277,6 +297,12 @@ After initial exploration, we focus on specific phyla that appear to vary across
 
 ```{r phylum-deinococcota, fig.width=7, fig.height=3.5}
 # Narrow in on a specific group
+
+deinococcota_df <- 
+  phylum_df %>%
+  filter(Phylum == "Deinococcota")
+
+
 # Deinococcota - y: abundance, x: sample, dot plot + boxplot
 deinococcota_phylum_sample_type <- 
   phylum_df %>%
@@ -296,9 +322,31 @@ deinococcota_phylum_sample_type <-
 #View
 deinococcota_phylum_sample_type
 
-# Statistically: Kruskall-Wallis followed by a Tukey's Posthoc test
-# These are non-parametric (non-normal) stat tests
+```
 
+Nice! We were able to look at the relative abundance of Deinococcota by sample type. Now I want to carry out some statistics to see if these differences are significant. Again, I want to mention the bimodal distribution of Deinococcota in the skimmed milk powder samples.
+
+
+```{r normal-normal-deino-phylum}
+#Shapiro-Wilk test for normality
+deinococcota_df %>%
+  # remove cream silo sample since it has fewer than three data points
+  filter(environment_material != "Cream Silo") %>%  
+  group_by(environment_material) %>%
+  filter(n() >= 3) %>%  # ensure enough samples per group for Shapiro test
+  shapiro_test(Abundance)
+
+
+```
+
+Okay nice all p values were < 0.05 across all sample types, indicating that the data is not normally distributed. 
+
+I am now going to move forward with a Kruskal-Wallis test to see if there are significant between-group differences in relative abundance of Deinococcota. Followed by Dunn's test.
+
+
+```{r phylum-deino-stats}
+# Statistically: Kruskall-Wallis followed by post-hoc Dunn's test
+# These are non-parametric (non-normal) stat tests
 
 # Filter for just Deinococcota
 deinococcota_df <- 
@@ -320,8 +368,15 @@ dunn_deino <- deinococcota_df %>%
 # View post-hoc results
 dunn_deino
 
+#view(dunn_deino)
 
 ```
+
+From these results we saw that Bulk Tank Milk differs significantly from Collection Tanker Milk, Whole Milk Silo, and Skimmed Milk Powder.
+
+Collection Tanker Milk and Skimmed Milk Powder are significantly different from Whole Milk Silo.
+
+Skimmed Milk Silo and Whole Milk Silo show no significant difference in Abundance.
 
 
 ### A2. Bacteroidota
@@ -346,11 +401,44 @@ bacteroidota_phylum_sample_type <-
 
 #View
 bacteroidota_phylum_sample_type
+```
+Now going to statistically test these differences with Kruskall-Wallis test followed by Dunn's post-hoc test.
 
-# Statistically: Kruskall-Wallis followed by a Tukey's Posthoc test
-# These are non-parametric (non-normal) stat tests
+```{r phylum-Bacteroidota-stats}
+# Statistically: Kruskall-Wallis followed by a Dunn's post-hoc test
+
+
+# Filter for just Bacteroidota
+bacteroidota_df <- 
+  phylum_df %>%
+  filter(Phylum == "Bacteroidota")
+
+# Kruskal-Wallis test
+kruskal_bacteroid <- bacteroidota_df %>%
+  kruskal_test(Abundance ~ environment_material)
+
+# View result
+kruskal_bacteroid
+
+# If significant (p < 0.05), run post-hoc Dunn's test
+dunn_bacteroid <- bacteroidota_df %>%
+  dunn_test(Abundance ~ environment_material, p.adjust.method = "fdr") %>%
+  add_xy_position(x = "environment_material")
+
+# View post-hoc results
+dunn_bacteroid
+
 
 ```
+Significant comparisons for Bacteroidota:
+
+Bulk Tank Milk vs. Collection Tanker Milk
+
+Bulk Tank Milk vs. Whole Milk Silo
+
+**Bulk Tank Milk vs. Skimmed Milk Powder**
+
+**Collection Tanker Milk vs. Skimmed Milk Powder**
 
 ### A3. Pseudomonadota
 
@@ -375,10 +463,43 @@ pseudomonadota_phylum_sample_type <-
 #View
 pseudomonadota_phylum_sample_type
 
-# Statistically: Kruskall-Wallis followed by a Tukey's Posthoc test
-# These are non-parametric (non-normal) stat tests
 
 ```
+
+```{r phylum-pseudo-stats}
+# Statistically: Kruskall-Wallis followed by a Dunn's post-hoc test
+
+
+# Filter for just Pseudomonadota
+pseudo_df <- 
+  phylum_df %>%
+  filter(Phylum == "Pseudomonadota")
+
+# Kruskal-Wallis test
+kruskal_pseudo <- pseudo_df %>%
+  kruskal_test(Abundance ~ environment_material)
+
+# View result
+kruskal_pseudo
+
+# If significant (p < 0.05), run post-hoc Dunn's test
+dunn_pseudo <- pseudo_df %>%
+  dunn_test(Abundance ~ environment_material, p.adjust.method = "fdr") %>%
+  add_xy_position(x = "environment_material")
+
+# View post-hoc results
+dunn_pseudo
+
+
+```
+Significant results for Pseudomonadota:
+
+Bulk Tank Milk vs. Collection Tanker Milk	
+Bulk Tank Milk vs. Whole Milk Silo	
+Bulk Tank Milk vs. Skimmed Milk Powder	
+Collection Tanker Milk vs. Skimmed Milk Powder
+Whole Milk Silo vs. Skimmed Milk Powder	
+Skimmed Milk Silo vs. Skimmed Milk Powder	
 
 
 ### A4. Bacillota
@@ -409,9 +530,40 @@ bacillota_phylum_sample_type
 
 ```
 
+```{r phylum-bacillota-stats}
+# Statistically: Kruskall-Wallis followed by a Dunn's post-hoc test
+
+
+# Filter for just Bacillota
+bacillota_df <- 
+  phylum_df %>%
+  filter(Phylum == "Bacillota")
+
+# Kruskal-Wallis test
+kruskal_bacillota <- bacillota_df %>%
+  kruskal_test(Abundance ~ environment_material)
+
+# View result
+kruskal_bacillota
+
+# If significant (p < 0.05), run post-hoc Dunn's test
+dunn_bacillota <- bacillota_df %>%
+  dunn_test(Abundance ~ environment_material, p.adjust.method = "fdr") %>%
+  add_xy_position(x = "environment_material")
+
+# View post-hoc results
+dunn_bacillota
+
+```
+Significant results for bacillota:
+
+Skimmed Milk Powder vs. Bulk Tank Milk
+
+Skimmed MIlke Powder vs. Whole Milk Silo
+
 INTERPRETATION #4: Based on these phylum-level analyses, were there any phyla that you were able to identify to focus on moving forward for deeper taxonomic analyses? Why?
 
-Yes! Moving forward the phylum that I am most curious about is Deinococcota! This was the only phylum (in the top ten most abundant phyla we looked at) where the relative abundance in Skimmed Milk Powder samples were much higher than the other types of dairy samples that were tested (differences were significant). I want to take a deeper look at lower levels of taxonomy to epxlore what is really going on here. I'm quite excited about these differences in relative abundance, and I think it is one of the more interesting results I've seen!!
+Yes! Moving forward the phylum that I am most curious about is Deinococcota! This was the only phylum (in the top ten most abundant phyla we looked at) where the relative abundance in Skimmed Milk Powder samples were much higher than the other types of dairy samples that were tested (differences were significant). I want to take a deeper look at lower levels of taxonomy to explore what is really going on here. I'm quite excited about these differences in relative abundance, and I think it is one of the more interesting results I've seen!! I'm especially intrigued by the bimodal distribution I am seeing with some of these sample types.
 
 Note that I also followed  up with Bacteroidota!
 
@@ -439,7 +591,7 @@ save(genus_df,
 
  
 ```
-### B1. Deinococcota Genera 
+### Deinococcota Genera 
 
 ```{r deino-genus, fig.width=6, fig.height=6}
 # Deinococcota
@@ -471,7 +623,7 @@ Wow wow wow!! I'm so glad I plotted at the level of genus - you can see that the
 
 Since these results are so cool I'm also going to follow up with looking at Bacteroidota at the genus level.
 
-
+### Bacteroidota Genera
 ```{r bacteroid-genus, fig.width=6, fig.height=6}
 
 
@@ -512,7 +664,16 @@ genus_df %>%
   nrow()
 
 ```
+Okay a few quick notes here! I struggled so much to get this plot together, and I think it was because there were way to many genera to be displayed on one plot (it looked like a mess of random numbers when I plotted it). So, I then went and selected the 10 genera with the highest relative abundance. I also was curious to see how many Bacteroidota genera were there, and I found out there were 195! Wow!
 
+
+
+Okay, now my goal is to create a plot that looks at the relative abundance of three specific genera (Pseudomonas, Lactococcus and Acinetobacter) in isolation across the different sample types. I selected these three specific genera because they are discussed in the paper as being genera with psychrotrophic, food spoilage-associated genera.
+
+Reminder of my hypothesis: Refrigerated storage (pre-pasteurization) will result in an increased relative abundance of psychrotrophic spoilage-associated bacteria. After pasteurization, these psychrotrophic bacteria will diminish.
+
+
+First I want to look at the genus Pseudomonas separately by sample type.
 
 ### A4. Pseudomonas
 
@@ -538,6 +699,9 @@ pseudomonas_genus_sample_type <-
 pseudomonas_genus_sample_type
 
 ```
+Followed by looking at the genus Acinetobacter in isolation.
+
+
 ### Acinetobacter
 
 ```{r genus-acinetobacter, fig.width=7, fig.height=3.5}
@@ -562,6 +726,8 @@ acinetobacter_genus_sample_type <-
 acinetobacter_genus_sample_type
 
 ```
+Next I looked at the relative abundance of Lactococcus in isolation across sample types.
+
 
 ### Lactococcus
 
@@ -587,6 +753,26 @@ lactococcus_genus_sample_type <-
 pseudomonas_genus_sample_type + lactococcus_genus_sample_type + acinetobacter_genus_sample_type
 
 ```
+
+This was really interesting to see. Although I don't think I have enough time to run stats on this plot I do want to make some initial interpretations about it!
+
+Based on the results originally presented in the paper, I made the hypothesis that refrigerated storage (pre-pasteurization) will result in an increased relative abundance of psychrotrophic spoilage-associated bacteria. After pasteurization, these psychrotrophic bacteria will diminish.
+
+**Note**: Psychrotrophic bacteria describe bacteria that can grow at temperatures equal to or lower than 7°C.
+
+To do this I looked at three different genera that are widely known to contain many species of typical psychrophilic spoilage bacteria. I hypothesized that when milk is stored at cold temperatures there will be an increased relative abundance/ dominance of psychrotrophic spoilage-associated bacteria. But after pasteurization (heat treatment process that uses high temperatures to kill harmful microorganisms, prevent spoilage and extend shelf life).
+
+By looking at the graphs (without stats to indicate significance of results) I found that as a general trend, refrigerated storage (pre-pasteurization) results in an increased relative abundance of Pseudomonas, Acinetobacter and Lactococcus. ALthough the increase in Lactococcus is visually much less pronounced than Pseudomonas or Lactococcus.
+
+SOmething really interesting that I saw was that the relative abundance of these psychrotrophic food-spoilage associated bacteria is not always diminished after pasteurization like I had hypothesized. In Pseudomonas it actualloy looks like there is a pretty big increase AFTER pasteurization.
+
+If I had more time beofre this project was due I would really be interested in running statistics on these plots and looking further into this result by filtering down to the ASV level.
+
+
+I then focused my genus-leval analysis on two themrophilic genera, Geobacillus and Thermus, in order to explore my second hypothesis: Skim milk powder will be enriched with thermophilic genera.
+
+Starting with Geobacillus.
+
 ### Geobacillus
 
 ```{r genus-geobacillus, fig.width=7, fig.height=3.5}
@@ -611,6 +797,8 @@ geobacillus_genus_sample_type <-
 geobacillus_genus_sample_type
 
 ```
+Great, now looking at Thermus.
+
 ### Thermus
 
 ```{r genus-thermus, fig.width=7, fig.height=3.5}
@@ -639,9 +827,10 @@ thermus_genus_sample_type
 thermus_genus_sample_type + geobacillus_genus_sample_type
 
 ```
-Okay a few quick notes here! I struggled so much to get this plot together, and I think it was because there were way to many genera to be displayed on one plot (it looked like a mess of random numbers when I plotted it). So, I then went and selected the 10 genera with the highest relative abundance. I also was curious to see how many Bacteroidota genera were there, and I found out there were 195! Wow!
+From this plot we see that skim milk powder has increased relative abundance of both Thermos and Geobacillus. Something we also see here is a bimodal distribution in the relative abundance of both of these genera, which has been a trend for the relative abundances in quite a few of the genera we have looked at.
 
 
+**Note**: This following analysis was done for the homework before I really focused in on these two hypotheses ahead of the presentation. I left it in the document in addition to the other analysis I have done. 
 
 INTERPRETATION #5: Please make some plots of mid-level taxonomic ranks (e.g. Genus, Family, Order) as it relates to your scientific question. Were there any changes in the mid-level taxonomic trends compared to the phylum-level results? What does that tell you about that taxonomic group?
 
@@ -650,7 +839,7 @@ Scientific Question: How is microbial biodiversity modified as milk is processed
 Wow! This mid-level taxonomic analysis was really cool, felt like I was teasing out important information about the makeup of the microbial communities present in these samples. I will definitely further this analysis before my presentation, but for now will focus my interpretation on two genus-level plots (Deinococcota and Bacteroidota).
 
 *Deinococcota*:
-Once I broke down the Deinococcota phylum into genera, I saw that three different genera, Deinococcus, Rhabdothermus, and Thermus, were represented in our samples. When I looked at Deinococcota at the phylum level, it was the only phylum where there was low relative abundance in all sample types *except* the Skimmed Milk Powder samples. The most consistent trend we saw across the top ten most abundant phyla was that they had a higher relative abundance in the least processed samples and less abundance in the more processed Skim Milk Powder samples.
+Once I broke down the Deinococcota phylum into genera, I saw that three different genera, Deinococcus, Rhabdothermus, and Thermus, were represented in our samples. When I looked at Deinococcota at the phylum level, it was one of the few phyla where there was low relative abundance in all sample types *except* the Skimmed Milk Powder samples. The most consistent trend we saw across the top ten most abundant phyla was that they had a higher relative abundance in the least processed samples and less abundance in the more processed Skim Milk Powder samples.
 
 When we broke the Deinococcota phylum down into genera, we see that we do not see the trend we observed at the phylum level for the genera Deinococcus or Rhabdothermus, BUT we do see this trend in the genus Thermus!! It seems as though Thermus is the only genus contributing to the trend we saw at the phylum level! I'm excited to do a bit of a literature review to see if I can identify a reason why Thermus might have much higher relative abundance in Skim Milk Powder vs Bulk Tank Milk!
 
@@ -663,7 +852,7 @@ Like I mentioned above in my document, I really struggled to make this plot of t
 
 Now, let's take a look at the ASVs. This is where the *real* ecology/biology happens! This is because the ASV-level plots will provide us with a more detailed view of **which specific taxa (ASVs) are driving the overall trends seen at the higher taxonomic levels (e.g. phylum)**.
 
-Before we calculate the ASV-level abundances, let's take a second to think about *who* we'd like to consider. There's a lot of ASVs! In fact, there are `r ntaxa(scaled_physeq)`! It is difficult analyze all of them! Therefore, we will remove ASVs that have an overall count across the entire dataset of 1% of a scaled sample to 1962. This is a little arbitrary and therefore, you may choose a different threshold for your dataset. The goal here is to **dramatically decreases the number of ASVs in the dataset** to help make the ASV-level data analysis much easier. 
+Before we calculate the ASV-level abundances, let's take a second to think about *who* we'd like to consider. There's a lot of ASVs! In fact, there are `r ntaxa(scaled_physeq)`! It is difficult analyze all of them! Therefore, we will remove ASVs that have an overall count across the entire dataset of 1% of a scaled sample to 2009. The goal here is to **dramatically decreases the number of ASVs in the dataset** to help make the ASV-level data analysis much easier. 
 
 Of course, if we had more time in class, we could run differential abundance and this would also help us to identify and statistically test which ASVs are important and also help us narrow on specific ASVs. 
 
@@ -801,7 +990,7 @@ INTERPRETATION #6: Were the most abundant ASVs in your dataset represented in yo
 
 In my Deinococcota ASV plot, ASV_005 was represented. In my Bacteroidota ASV plot, ASV_0048 and ASV_0037 were represented. I discovered top ASVs are from 0001 - ASV_0011 (assuming ASV_0010 was a eukaryotic ASV that was pruned out).
 
-In order to view these most abundant ASVs, I made a separate plot (above). After viewing this plot, I realized I should probably do more mid-level analysis on the Bacillota and Pseudomonadota phyla, as all of the top ten most abundant ASVs are from these two phyla, besides ASV_0005 from the Deinococcota phylum.
+In order to view these most abundant ASVs, I made a separate plot (above). After viewing this plot, I realized I should probably do more mid-level analysis on the Bacillota and Pseudomonadota phyla (now carried out above), as all of the top ten most abundant ASVs are from these two phyla, besides ASV_0005 from the Deinococcota phylum.
 
 
 ### Bacillota ASVs 
@@ -898,7 +1087,24 @@ In the paper, they saw that "The skimmed milk powder generated during the mid-la
 
 Although for the homework I just did a very preliminary analysis at the ASV level, over the weekend I will do a more in-depth analysis of the literature, and will have time to make more plots to explore these results further! I also plan to redo a lot of these analyses after I have split up the samples into mid and late lactation periods.
 
-Finally, one thing I would like to reiterate is that there was only one cream silo sample, but throughout the paper they use this singular sample to make conclusions about the microbial communities in cream silos. I just have to say that I personally am very skeptical of this approach. 
+Finally, one thing I would like to reiterate is that there was only one cream silo sample, but throughout the paper they use this singular sample to make conclusions about the microbial communities in cream silos. I just have to say that I personally am very skeptical of this approach.
+
+# Final THoughts
+
+In this document I successfully carried out a microbial compositional analysis of dairy samples across a skim milk processing pipeline. To do this I calculated th relative abundances of taxonomic groups at various levels (phylum, genus, ASVs) and then made some nice visualizations of how the microbial taxa vary across the dairy sample types. Due to time constraints (crazy last week of rotation/classes/TAing, did as much as I could) I unfortunately only ran statistical analysis on a few of these results.
+
+Throughout this project the main scientific question I have been trying to ask is: How does microbial diversity change throughout the skim milk manufacturing process?
+
+In this document, I explored two main hypotheses related to my overarching scientific question:
+
+1. Refrigerated storage (pre-pasteurization) will result in an increased relative abundance of psychrotrophic spoilage-associated bacteria. After pasteurization, these psychrotrophic bacteria will diminish.
+
+-Here, without confirming through statistical tests it seems as though as refrigerated storage (pre-pasteurization) results in an increased relative abundance of Acinetobacter, Lactococcus and Pseudomonas
+-The increased relative abundance of these psychrotrophic, food spoilage-associated genera can persist after pasteurization... they don't necessarily decrease in relative abundance after pasteurization.
+-If I had more times I would definitely look further into this, take it down to the ASV level and run stats.
+
+2. Skim milk powder will be enriched with thermophilic genera.
+-Here, without confirming through statistical tests it seems as though skim milk powder had increased relative abundance of both Thermus and Geobacillus (although there is a weird bimodal distribution)
 
 
 # Final info for Reproducibility 
