@@ -2,7 +2,7 @@
  
 The ultimate goal of this project is to re-run bioinformatic analyses from the literature in order to learn how to organize computational projects, work in the command line, perform cloud computing, and gather, interpret, and analyze amplicon data to advance our understanding of microbial systems.
 
-In this project I will be re-rerenning analyses from the literature, based on the data from a 2020 paper by McHugh et al. titled "Tracking the Dairy Microbiota from Farm Bulk Tank to Skimmed Milk Powder". The authors of this paper used 16S rRNA gene sequencing to provide insight into the changes in microbiota of dairy samples throughout a milk powder manufacturing process, during both the mid-lactation and late-lactation period. Essentially, they tracked the microbiota in six different dairy sample types from raw, bulk tank milk at the start of the manufacturing process to the final skimmed milk powder product.
+In this project I will be re-rerunning analyses from the literature, based on the data from a 2020 paper by McHugh et al. titled "Tracking the Dairy Microbiota from Farm Bulk Tank to Skimmed Milk Powder". The authors of this paper used 16S rRNA gene sequencing to provide insight into the changes in microbiota of dairy samples throughout a milk powder manufacturing process, during both the mid-lactation and late-lactation period. Essentially, they tracked the microbiota in six different dairy sample types from raw, bulk tank milk at the start of the manufacturing process to the final skimmed milk powder product.
 
 In this paper, 2x250 bp sequencing on an Illumina MiSeq Sequencer (amplifying the V3-V4 region of the 16S rRNA gene) was carried out using the following primers:
 
